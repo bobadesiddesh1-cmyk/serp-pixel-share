@@ -23,12 +23,28 @@ Built because rank tracking lies. Position 2 sitting at 1,680px under an AI Over
 
 ---
 
+> **Before you trust a number from this, read [`TESTING.md`](TESTING.md).** It
+> states exactly what has been verified against a running Chrome and what has
+> not. Selector correctness against live google.com is the open item.
+
 ## Install (unpacked)
 
 1. `chrome://extensions` → enable **Developer mode**
 2. **Load unpacked** → select this folder
 3. Open a Google search results page
 4. Click the toolbar icon to open the side panel
+
+Keep the extension in one fixed folder — the unpacked extension ID is derived
+from the path, and the OAuth client is bound to that ID. See `TESTING.md` for
+how to pin it.
+
+## Docs
+
+| File | What is in it |
+|---|---|
+| [`TESTING.md`](TESTING.md) | Verified vs unverified, how to run the tests, GSC OAuth walkthrough, how to capture diagnostics |
+| [`CHANGELOG.md`](CHANGELOG.md) | What changed and why |
+| [`STORE_LISTING.md`](STORE_LISTING.md) | Web Store copy, permission justifications, privacy disclosure |
 
 Works without any Google account setup. GSC features are optional.
 

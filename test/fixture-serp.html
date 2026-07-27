@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SYNTHETIC SERP FIXTURE — not real Google markup</title>
+<style>
+  body { font: 14px/1.5 Arial, sans-serif; margin: 0; }
+  #cnt { max-width: 1180px; margin: 0 auto; padding: 20px 0 0 180px; }
+  #center_col { width: 652px; }
+  #rhs { position: absolute; left: 900px; top: 100px; width: 380px; }
+  .blk { margin: 0 0 28px; padding: 12px; border: 1px solid #ebebeb; border-radius: 8px; }
+  h3 { font-size: 20px; color: #1a0dab; margin: 0 0 4px; font-weight: 400; }
+  a { text-decoration: none; color: inherit; }
+  .u { color: #006621; font-size: 13px; }
+  .sn { color: #4d5156; }
+  .tall { min-height: 260px; }
+</style>
+</head>
+<body>
+
+<!--
+  SYNTHETIC FIXTURE. This is NOT a capture of google.com.
+
+  It is hand-built to mirror the STRUCTURAL ANCHORS the classifier is allowed
+  to key on (#center_col, #rso, #tads/[data-text-ad], role/aria-expanded on PAA
+  rows, "AI Overview" label text, a>h3 for organics, #rhs for the knowledge
+  panel). It exists to exercise the measure -> classify -> estimate -> overlay
+  -> panel pipeline end to end without network access.
+
+  It CANNOT prove the selectors match real Google markup. If Google's real DOM
+  differs from these assumptions, this fixture will pass while the live SERP
+  fails. Selector correctness is only established by running the Diagnostics
+  export on a real results page.
+-->
+
+<div id="cnt">
+<div id="rcnt">
+<div id="center_col">
+
+  <!-- ads -->
+  <div id="tads">
+    <div data-text-ad="1" class="blk">
+      <span>Sponsored</span>
+      <a href="https://lender-a.example/apply"><h3>Personal Loan @ 10.5% — Apply Online</h3></a>
+      <div class="u">lender-a.example</div>
+      <div class="sn">Instant approval. Minimal documentation. Check eligibility in 2 minutes.</div>
+    </div>
+    <div data-text-ad="1" class="blk">
+      <span>Sponsored</span>
+      <a href="https://lender-b.example/loans"><h3>Low Interest Personal Loans</h3></a>
+      <div class="u">lender-b.example</div>
+      <div class="sn">Rates from 9.99% p.a. No hidden charges.</div>
+    </div>
+  </div>
+
+  <!-- AI Overview -->
+  <div jsname="aioBlock" data-hveid="aio1" class="blk tall">
+    <div role="heading" aria-level="2"><span>AI Overview</span></div>
+    <div class="sn">
+      Personal loan interest rates in India typically range from 10.5% to 24% per annum,
+      depending on credit score, income, employer category and loan tenure. Applicants with
+      a CIBIL score above 750 generally receive the lowest advertised rates. Processing fees
+      usually fall between 0.5% and 2.5% of the sanctioned amount.
+    </div>
+    <div class="sn">
+      Rates are floating or fixed depending on the lender. Most public sector banks publish
+      a benchmark-linked rate, while NBFCs price on internal risk models.
+    </div>
+    <div role="button" aria-expanded="false" tabindex="0">Show more</div>
+    <div>
+      <a href="https://bankrate-demo.example/personal-loan-rates">bankrate-demo.example</a>
+      <a href="https://hdfcbank.com/personal-loan/rates">hdfcbank.com</a>
+      <a href="https://moneycontrol-demo.example/loans">moneycontrol-demo.example</a>
+      <a href="https://support.google.com/websearch">About this result</a>
+    </div>
+  </div>
+
+  <div id="search">
+  <div id="rso">
+
+    <!-- organic 1 -->
+    <div data-hveid="o1" class="blk">
+      <a href="https://bankbazaar-demo.example/personal-loan/interest-rate.html"><h3>Personal Loan Interest Rates 2026 — Compare All Banks</h3></a>
+      <div class="u">bankbazaar-demo.example › personal-loan</div>
+      <div class="sn">Compare personal loan interest rates across 40+ banks and NBFCs. Updated daily.</div>
+    </div>
+
+    <!-- People also ask -->
+    <div jsname="paaBlock" data-hveid="paa1" class="blk">
+      <div role="heading" aria-level="2">People also ask</div>
+      <div role="button" aria-expanded="false">What is the lowest personal loan interest rate?</div>
+      <div role="button" aria-expanded="false">Is 11% a good personal loan rate?</div>
+      <div role="button" aria-expanded="false">How is personal loan interest calculated?</div>
+      <div role="button" aria-expanded="false">Can I negotiate my personal loan rate?</div>
+    </div>
+
+    <!-- organic 2 — OWNED domain, with sitelinks -->
+    <div data-hveid="o2" class="blk">
+      <a href="https://hdfcbank.com/personal/borrow/popular-loans/personal-loan/interest-rates"><h3>Personal Loan Interest Rates — HDFC Bank</h3></a>
+      <div class="u">hdfcbank.com › personal › borrow</div>
+      <div class="sn">Personal loan interest rates starting at 10.85% p.a. Check your pre-approved offer.</div>
+      <div>
+        <a href="https://hdfcbank.com/personal/borrow/popular-loans/personal-loan/eligibility">Eligibility criteria</a>
+        <a href="https://hdfcbank.com/personal/borrow/popular-loans/personal-loan/fees-and-charges">Fees and charges</a>
+        <a href="https://support.google.com/websearch">About this result</a>
+      </div>
+    </div>
+
+    <!-- organic 3 -->
+    <div data-hveid="o3" class="blk">
+      <a href="https://paisabazaar-demo.example/personal-loan/interest-rates/"><h3>Personal Loan Interest Rates — Compare &amp; Apply</h3></a>
+      <div class="u">paisabazaar-demo.example</div>
+      <div class="sn">Lowest personal loan interest rate starting from 10.49% p.a.</div>
+    </div>
+
+    <!-- discussions -->
+    <div jsname="discBlock" data-hveid="d1" class="blk">
+      <div role="heading" aria-level="2">Discussions and forums</div>
+      <a href="https://reddit.com/r/IndiaInvestments/comments/abc">What rate did you get on your personal loan?</a>
+      <a href="https://quora.com/personal-loan-rate-india">Is 12% too high for a personal loan?</a>
+    </div>
+
+    <!-- organic 4 — social -->
+    <div data-hveid="o4" class="blk">
+      <a href="https://linkedin.com/pulse/personal-loan-rates-2026"><h3>Personal Loan Rates in 2026 — What Changed</h3></a>
+      <div class="u">linkedin.com</div>
+      <div class="sn">A breakdown of repo-linked pricing and what it means for borrowers.</div>
+    </div>
+
+    <!-- organic 5 -->
+    <div data-hveid="o5" class="blk">
+      <a href="https://cleartax-demo.example/personal-loan-interest"><h3>Personal Loan Interest Rate — Complete Guide</h3></a>
+      <div class="u">cleartax-demo.example</div>
+      <div class="sn">Everything about how lenders price personal loans.</div>
+    </div>
+
+  </div>
+  </div>
+
+  <!-- related searches -->
+  <div id="botstuff">
+    <div id="bres" class="blk">
+      <div role="heading" aria-level="2">Related searches</div>
+      <a href="https://www.google.com/search?q=personal+loan+eligibility">personal loan eligibility</a>
+      <a href="https://www.google.com/search?q=personal+loan+emi+calculator">personal loan emi calculator</a>
+    </div>
+  </div>
+
+</div>
+
+<!-- knowledge panel -->
+<div id="rhs">
+  <div data-attrid="kc:/" class="blk tall">
+    <div role="heading" aria-level="2">Personal loan</div>
+    <div class="sn">A personal loan is an unsecured loan taken for personal expenses, repaid in fixed monthly instalments.</div>
+    <a href="https://en.wikipedia.org/wiki/Unsecured_debt">Wikipedia</a>
+  </div>
+</div>
+
+</div>
+</div>
+
+</body>
+</html>

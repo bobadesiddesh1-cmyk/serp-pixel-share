@@ -89,7 +89,9 @@ function renderVerdict(s, own) {
 }
 
 function colorFor(el) {
-  if (el.owned) return SPS.COLORS.OWNED;
+  // On the AI Overview block `owned` means "cites you", not "is your listing".
+  // Amber must survive that, or the legend stops matching the overlay.
+  if (el.owned && el.type !== SPS.TYPES.AI_OVERVIEW) return SPS.COLORS.OWNED;
   return SPS.COLORS[el.type] || SPS.COLORS.organic;
 }
 
@@ -344,7 +346,12 @@ function pollBatch() {
       $('#batch-stop').hidden = true;
       renderBatchResults(r.results);
       refreshLogSummary();
-      toast('Batch complete: ' + r.done + ' queries logged.');
+      if (r.rateLimited) {
+        toast('Google rate-limited the batch after ' + r.done + ' of ' + r.total +
+              '. Wait a few minutes and raise the pacing interval.', true);
+      } else {
+        toast('Batch complete: ' + r.done + ' queries logged.');
+      }
     }
   }, 900);
 }
@@ -411,8 +418,19 @@ $('#clear-log').addEventListener('click', async () => {
   toast('Scan log cleared.');
 });
 
-function download(filename, text) {
-  const blob = new Blob([text], { type: 'text/csv;charset=utf-8' });
+$('#diag').addEventListener('click', async () => {
+  toast('Collecting diagnostic…');
+  const r = await send({ type: 'SPS_DIAGNOSTIC' });
+  if (!r.ok) return toast(r.error || 'Diagnostic failed.', true);
+  const d = r.diagnostic;
+  const q = (d.query || 'query').replace(/[^a-z0-9]+/gi, '-').slice(0, 40);
+  download('sps-diagnostic-' + q + '.json', JSON.stringify(d, null, 2), 'application/json');
+  toast('Diagnostic saved: ' + d.elements.length + ' elements, ' +
+        d.summary.unclassified + ' unclassified.');
+});
+
+function download(filename, text, mime = 'text/csv;charset=utf-8') {
+  const blob = new Blob([text], { type: mime });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = filename;

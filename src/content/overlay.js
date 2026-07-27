@@ -40,7 +40,7 @@ const SPS_OVERLAY = (() => {
 
       const d = document.createElement('div');
       d.className = 'sps-label';
-      if (el.owned) d.classList.add('sps-label--owned');
+      if (el.owned && el.type !== SPS.TYPES.AI_OVERVIEW) d.classList.add('sps-label--owned');
       if (el.type === SPS.TYPES.AI_OVERVIEW) d.classList.add('sps-label--aio');
       if (el.type === SPS.TYPES.UNCLASSIFIED) d.classList.add('sps-label--unclassified');
 
@@ -119,7 +119,12 @@ const SPS_OVERLAY = (() => {
     const r = root();
     for (const el of elements) {
       if (el.type === SPS.TYPES.SITELINK) continue;
-      const color = el.owned ? SPS.COLORS.OWNED : (SPS.COLORS[el.type] || SPS.COLORS.organic);
+      // Teal marks a listing that is yours. On the AI Overview block `owned`
+      // means "cites you", which is a different claim — that block stays amber
+      // so the colour key holds.
+      const color = (el.owned && el.type !== SPS.TYPES.AI_OVERVIEW)
+        ? SPS.COLORS.OWNED
+        : (SPS.COLORS[el.type] || SPS.COLORS.organic);
       const b = document.createElement('div');
       b.className = 'sps-box';
       b.style.top = el.yTop + 'px';

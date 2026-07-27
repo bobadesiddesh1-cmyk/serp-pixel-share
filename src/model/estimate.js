@@ -40,8 +40,12 @@ const SPS_MODEL = (() => {
   // decay = exp(-k * max(0, y - fold) / 1000)
   const DECAY_K = { desktop: 0.34, laptop: 0.38, mobile: 0.52 };
 
+  // Mirrors SPS.VIEWPORTS heights. Kept local so the model runs without constants.js.
+  const FOLD_H = { desktop: 1080, laptop: 900, mobile: 844 };
+
   function pixelDecay(y, viewport) {
-    const fold = (SPS.VIEWPORTS[viewport] || SPS.VIEWPORTS.desktop).h;
+    const fromGlobal = typeof SPS !== 'undefined' && SPS.VIEWPORTS?.[viewport]?.h;
+    const fold = fromGlobal || FOLD_H[viewport] || FOLD_H.desktop;
     const k = DECAY_K[viewport] ?? DECAY_K.desktop;
     if (y <= fold) return 1;
     return Math.exp(-k * ((y - fold) / 1000));
@@ -92,10 +96,14 @@ const SPS_MODEL = (() => {
    * @param {string[]} typesAbove - element types positioned above this one
    * @param {string} viewport
    */
+  // The model is loaded after constants.js in every extension context, but it
+  // must not hard-depend on that global — it has to stay testable on its own.
+  const ORGANIC_LIKE = ['organic', 'sitelink'];
+
   function estimate(el, typesAbove, viewport = 'desktop') {
     const overrides = SPS_MODEL._overrides || {};
 
-    if (el.type === SPS.TYPES.ORGANIC || el.type === SPS.TYPES.SITELINK) {
+    if (ORGANIC_LIKE.includes(el.type)) {
       const base = baseCTR(el.rank || 20, viewport);
       const decay = pixelDecay(el.yTop, viewport);
       const supp = featureSuppression(typesAbove);
@@ -113,12 +121,20 @@ const SPS_MODEL = (() => {
    * Effective position: the organic rank whose BASE curve value matches this
    * element's suppressed, decayed estimate. Answers "what does #2 actually feel like".
    */
+  // Positions past the end of the curve are extrapolated, but the result is a
+  // label shown to clients — it must stay a finite, plausible integer.
+  const MAX_EFFECTIVE_POSITION = 100;
+
   function effectivePosition(estCTR, viewport = 'desktop') {
     const curve = viewport === 'mobile' ? BASE_CURVE.mobile : BASE_CURVE.desktop;
+    if (!Number.isFinite(estCTR) || estCTR <= 0) return MAX_EFFECTIVE_POSITION;
     for (let i = 0; i < curve.length; i++) {
       if (estCTR >= curve[i]) return i + 1;
     }
-    return curve.length + Math.ceil(Math.log(estCTR / curve[curve.length - 1]) / Math.log(0.92)) || curve.length + 1;
+    const tail = curve[curve.length - 1];
+    const extra = Math.ceil(Math.log(estCTR / tail) / Math.log(0.92));
+    if (!Number.isFinite(extra)) return MAX_EFFECTIVE_POSITION;
+    return Math.min(MAX_EFFECTIVE_POSITION, curve.length + Math.max(1, extra));
   }
 
   /**

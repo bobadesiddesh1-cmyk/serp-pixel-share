@@ -8,7 +8,7 @@ import '../shared/constants.js';
 import '../model/estimate.js';
 
 const latest = { scan: null, tabId: null, error: null };
-const batch = { running: false, queue: [], done: [], total: 0, cancel: false, tabId: null };
+const batch = { running: false, queue: [], done: [], total: 0, cancel: false, tabId: null, rateLimited: false };
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
@@ -52,6 +52,13 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
           if (!tab) return respond({ ok: false, error: 'No Google results tab in focus.' });
           const res = await chrome.tabs.sendMessage(tab.id, { type: 'SPS_REQUEST_SCAN' });
           return respond(res || { ok: false });
+        }
+
+        case 'SPS_DIAGNOSTIC': {
+          const tab = await activeSerpTab();
+          if (!tab) return respond({ ok: false, error: 'No Google results tab in focus.' });
+          const res = await chrome.tabs.sendMessage(tab.id, { type: 'SPS_REQUEST_DIAGNOSTIC' });
+          return respond(res || { ok: false, error: 'No response from the results page.' });
         }
 
         case 'SPS_GET_SETTINGS':
@@ -124,7 +131,8 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
             running: batch.running,
             done: batch.done.length,
             total: batch.total,
-            results: batch.done
+            results: batch.done,
+            rateLimited: batch.rateLimited
           });
 
         case 'SPS_SCAN_LOG':
@@ -170,6 +178,7 @@ async function startBatch(queries, engine) {
   if (batch.running) return;
   batch.running = true;
   batch.cancel = false;
+  batch.rateLimited = false;
   batch.queue = queries.map(q => q.trim()).filter(Boolean);
   batch.done = [];
   batch.total = batch.queue.length;
@@ -183,6 +192,18 @@ async function startBatch(queries, engine) {
       await chrome.tabs.update(tab.id, { url: engine + encodeURIComponent(q) });
       await waitForComplete(tab.id, 15000);
       await sleep(2200 + Math.random() * 1400); // AIO stream + human-ish pacing
+
+      // Google answers rate limiting with an interstitial at /sorry/. Pushing
+      // more requests into that only deepens the block, and every scan after it
+      // would be silently empty — which reads as "no features found" rather
+      // than "we were stopped". Abort loudly instead.
+      const current = await chrome.tabs.get(tab.id).catch(() => null);
+      if (current && /\/sorry\/|\/httpservice\/retry/.test(current.url || '')) {
+        batch.rateLimited = true;
+        batch.done.push({ query: q, ok: false, error: 'Rate limited by Google (/sorry/ interstitial). Batch stopped.' });
+        break;
+      }
+
       const res = await chrome.tabs.sendMessage(tab.id, { type: 'SPS_REQUEST_SCAN' }).catch(() => null);
       const s = res?.payload?.summary;
       batch.done.push({
@@ -210,7 +231,11 @@ async function startBatch(queries, engine) {
   try { await chrome.tabs.remove(tab.id); } catch (_) {}
   batch.running = false;
   batch.tabId = null;
-  chrome.runtime.sendMessage({ type: 'SPS_BATCH_DONE', results: batch.done }).catch(() => {});
+  chrome.runtime.sendMessage({
+    type: 'SPS_BATCH_DONE',
+    results: batch.done,
+    rateLimited: !!batch.rateLimited
+  }).catch(() => {});
 }
 
 function waitForComplete(tabId, timeout) {

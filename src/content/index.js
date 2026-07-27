@@ -65,7 +65,11 @@
         if (el.type === SPS.TYPES.ORGANIC || el.type === SPS.TYPES.SOCIAL) {
           el.effectivePos = SPS_MODEL.effectivePosition(el.estCTR, viewport);
         }
-        if (el.type !== SPS.TYPES.ORGANIC && el.type !== SPS.TYPES.SITELINK &&
+        // Only main-column features displace what follows them. A right-hand
+        // knowledge panel overlaps the same y range without pushing anything
+        // down, so counting it as "above" over-suppresses every result.
+        if (el.column !== 'right' &&
+            el.type !== SPS.TYPES.ORGANIC && el.type !== SPS.TYPES.SITELINK &&
             el.type !== SPS.TYPES.SOCIAL && el.type !== SPS.TYPES.UNCLASSIFIED) {
           typesAbove.push(el.type);
         }
@@ -157,7 +161,79 @@
   const target = document.querySelector('#center_col') || document.body;
   obs.observe(target, { childList: true, subtree: true });
 
+  /**
+   * Structural fingerprint of a node, for offline selector work.
+   * Deliberately records the anchors we are ALLOWED to key on (id, data-*,
+   * role, jsname presence, heading nesting) and never the hashed class names,
+   * so a diagnostic captured today is still readable after Google rotates them.
+   */
+  function fingerprint(node) {
+    if (!node) return null;
+    const attrs = {};
+    for (const a of node.attributes || []) {
+      if (a.name === 'class' || a.name === 'style') continue;
+      if (/^(id|role|jsname|aria-label|data-.*)$/.test(a.name)) {
+        attrs[a.name] = a.value.slice(0, 60);
+      }
+    }
+    const parent = node.parentElement;
+    return {
+      tag: node.tagName.toLowerCase(),
+      attrs,
+      parent: parent ? { tag: parent.tagName.toLowerCase(), id: parent.id || null } : null,
+      headings: [...node.querySelectorAll('h1,h2,h3,[role="heading"]')]
+        .slice(0, 3).map(h => (h.textContent || '').trim().slice(0, 60)),
+      linkCount: node.querySelectorAll('a[href^="http"]').length,
+      firstText: (node.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 120)
+    };
+  }
+
+  /**
+   * Full diagnostic. This is the artefact to send back when a selector is
+   * wrong: it pairs what the classifier decided with enough structure to see
+   * what it should have decided.
+   */
+  async function diagnostic() {
+    const s = state.scan || await scan();
+    if (!s) return { ok: false, error: 'Scan produced no result.' };
+
+    const aioContainer = SPS_AIO.findContainer();
+    const unclassified = [];
+    document.querySelectorAll('#rso > div, #center_col > div').forEach(n => {
+      if (!SPS_MEASURE.isRendered(n)) return;
+      if (SPS_MEASURE.docOffset(n).height < 120) return;
+      unclassified.push({ ...fingerprint(n), geometry: SPS_MEASURE.docOffset(n) });
+    });
+
+    return {
+      capturedAt: new Date().toISOString(),
+      extensionVersion: SPS.VERSION,
+      url: location.href,
+      query: queryFromUrl(),
+      userAgent: navigator.userAgent,
+      innerWidth: window.innerWidth,
+      summary: s.summary,
+      elements: s.elements.map(e => ({
+        type: e.type, rank: e.rank ?? null, yTop: e.yTop, height: e.height,
+        domain: e.domain ?? null, title: (e.title || '').slice(0, 80),
+        estCTR: e.estCTR, effectivePos: e.effectivePos ?? null, owned: !!e.owned
+      })),
+      aio: {
+        containerFound: !!aioContainer,
+        fingerprint: fingerprint(aioContainer),
+        citations: s.summary.aioCitations,
+        expanded: s.summary.aioExpanded
+      },
+      mainColumnBlocks: unclassified
+    };
+  }
+
   chrome.runtime.onMessage.addListener((msg, _sender, respond) => {
+    if (msg.type === 'SPS_REQUEST_DIAGNOSTIC') {
+      diagnostic().then(d => respond({ ok: true, diagnostic: d }))
+        .catch(e => respond({ ok: false, error: String(e?.message || e) }));
+      return true;
+    }
     if (msg.type === 'SPS_REQUEST_SCAN') {
       scan().then(s => respond({ ok: true, payload: s }));
       return true;

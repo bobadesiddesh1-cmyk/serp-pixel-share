@@ -141,24 +141,58 @@ const SPS_CLASSIFY = (() => {
    * Organic results. The critical detector.
    * Anchor: an <a> wrapping an <h3>, inside #rso / #search, not inside an ad container.
    */
+  /**
+   * Resolve the outermost node that still represents exactly ONE result.
+   *
+   * closest() returns the NEAREST ancestor matching any selector, which on
+   * current Google markup is usually an inner fragment wrapper, not the whole
+   * listing — that under-measures height and mis-places the overlay. Instead
+   * climb until the ancestor starts covering a second h3, and keep the last
+   * one that still held exactly one.
+   */
+  function resultBlock(anchor) {
+    const STOP = new Set(['rso', 'search', 'center_col', 'rcnt', 'main']);
+    let best = anchor.parentElement;
+    let el = anchor.parentElement;
+    for (let i = 0; i < 12 && el && el !== document.body; i++) {
+      if (el.id && STOP.has(el.id)) break;
+      if (el.parentElement && el.parentElement.id && STOP.has(el.parentElement.id)) {
+        // Direct child of the results container: the canonical result block.
+        best = el;
+        break;
+      }
+      if (el.querySelectorAll('h3').length > 1) break;
+      best = el;
+      el = el.parentElement;
+    }
+    return best;
+  }
+
   function organics(excludeNodes) {
     const out = [];
     const anchors = document.querySelectorAll('#search a h3, #rso a h3, #center_col a h3');
     for (const h3 of anchors) {
       const a = h3.closest('a[href^="http"]');
       if (!a) continue;
-      const block = a.closest('#rso > div, #search .g, div[data-hveid], div[jsname]') || a.parentElement;
+      const block = resultBlock(a);
       if (!block || !SPS_MEASURE.isRendered(block)) continue;
       if (excludeNodes.some(n => n.contains(block) || n === block)) continue;
       if (block.querySelector('[data-text-ad]') || block.closest('#tads, #tadsb, #bottomads')) continue;
       if (out.some(o => o.block === block)) continue;
 
       // Sitelinks: extra anchors inside the same block, below the h3
+      // Sitelinks: extra anchors below the h3, on the SAME host as the result.
+      // Without the host test this also swallows "About this result", cached
+      // links and breadcrumb chips, which inflates the element count and skews
+      // the normalised click share.
       const h3Y = SPS_MEASURE.docOffset(h3).yTop;
+      const mainHost = hostOf(a.href);
       const sitelinks = [...block.querySelectorAll('a[href^="http"]')]
         .filter(x => x !== a && !x.contains(h3) && SPS_MEASURE.isRendered(x) &&
                      SPS_MEASURE.docOffset(x).yTop > h3Y &&
-                     (x.textContent || '').trim().length > 3)
+                     (x.textContent || '').trim().length > 3 &&
+                     x.href !== a.href &&
+                     hostOf(x.href) === mainHost)
         .slice(0, 6);
 
       out.push({ block, anchor: a, title: (h3.textContent || '').trim(), sitelinks });
@@ -182,10 +216,18 @@ const SPS_CLASSIFY = (() => {
 
   function push(list, node, type, extra = {}) {
     if (!node || !SPS_MEASURE.isRendered(node)) return;
+    // Several detectors can legitimately resolve to the same node (a heading's
+    // closest() and a container id, for example). Counting it twice doubles its
+    // pixel share and corrupts the normalised click share.
+    if (list.some(e => e.node === node)) return;
     const g = SPS_MEASURE.docOffset(node);
     list.push({
       type,
       label: SPS.LABELS[type] || type,
+      // Right-hand-column blocks share the vertical range of the results column
+      // but do not displace it. Recorded so the model can skip them when
+      // accumulating what sits ABOVE a result.
+      column: node.closest && node.closest('#rhs, #rhs_block') ? 'right' : 'main',
       yTop: g.yTop,
       yBottom: g.yBottom,
       height: g.height,
