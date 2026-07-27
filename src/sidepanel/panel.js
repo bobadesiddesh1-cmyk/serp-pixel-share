@@ -171,8 +171,10 @@ function renderTable(scan) {
   for (const el of scan.elements) {
     if (el.type === SPS.TYPES.SITELINK) continue;
     const tr = document.createElement('tr');
-    if (el.owned) tr.className = 'own';
-    else if (el.type === SPS.TYPES.AI_OVERVIEW) tr.className = 'aio';
+    // Same rule as colorFor(): on the AI Overview, `owned` means "cites you",
+    // so the row stays amber rather than being highlighted as your listing.
+    if (el.type === SPS.TYPES.AI_OVERVIEW) tr.className = 'aio';
+    else if (el.owned) tr.className = 'own';
     else if (el.type === SPS.TYPES.UNCLASSIFIED) tr.className = 'unk';
 
     const td1 = document.createElement('td');
