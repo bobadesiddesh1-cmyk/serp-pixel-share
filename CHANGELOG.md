@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.2.1
+
+Fixes for two faults reported from live testing on Windows: the page churning
+continuously, and CTR labels appearing only on the AI Overview and the first
+result.
+
+### Fixed
+
+- **Only the first organic result got a label.** Google wraps consecutive
+  organic results in a single `#rso > div`. The block resolver added in 0.2.0
+  accepted "direct child of the results container" as a single result *before*
+  checking how many `h3` headings it covered, so the whole group collapsed into
+  one element and every result after the first was deduplicated away. The
+  heading count is now checked first. Reproduced in the fixture before fixing;
+  the fixture now carries the grouping wrapper permanently.
+- **People Also Ask swallowed the entire result group.** The detector scanned
+  containers inward, so any ancestor that merely *contained* a PAA block
+  matched — including that same group wrapper, which then excluded every
+  organic result inside it. It now resolves from the rows outward to the
+  tightest container holding at least three of them, and rejects candidates
+  containing `h3` headings.
+- **The page refreshed continuously.** The scan clicked the AI Overview
+  expander, which mutates the DOM, which the scan's own MutationObserver
+  treated as a reason to scan again — a self-sustaining loop, on top of an
+  unbounded rescan rate against Google's normal background churn. Four guards:
+  the AI Overview is expanded at most once per URL, the observer ignores
+  mutations from the extension's own nodes, it stays disconnected while a scan
+  runs, and auto-rescans are floored at 3s apart.
+- **Overlay flicker.** Every scan cleared and rebuilt every overlay node. The
+  overlay now redraws only when the layout it depicts actually changed.
+
+### Added
+
+- `test/run-stability.mjs` — drives the fixture under bursty DOM churn and
+  asserts the scan count, expander clicks and overlay redraws all converge.
+  Verified to fail against the 0.2.0 behaviour (6 scans and 6 expander clicks
+  in 10.5s) and pass after the fix (4 scans, 1 click, 1 redraw).
+
 ## 0.2.0
 
 First pass of verification against a running Chrome. Everything below was found

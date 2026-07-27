@@ -46,12 +46,27 @@ const SPS_CLASSIFY = (() => {
 
   function paa() {
     // PAA = a block of accordion rows, each role=button, inside #center_col.
+    //
+    // Resolve from the ROWS OUTWARD to the tightest container holding at least
+    // three of them. Scanning containers inward instead lets any ancestor that
+    // merely CONTAINS a PAA block match — including the group wrapper Google
+    // puts around consecutive organic results, which then swallows every
+    // result inside it.
     const out = [];
-    const blocks = document.querySelectorAll('#center_col div[jsname], #rso > div');
-    for (const b of blocks) {
-      const rows = b.querySelectorAll('[role="button"][aria-expanded], div[jsname][role="button"]');
-      if (rows.length >= 3 && b.querySelectorAll('a[href^="http"]').length <= rows.length * 3) {
-        if (!out.some(o => o.contains(b) || b.contains(o))) out.push(b);
+    const rows = document.querySelectorAll(
+      '#center_col [role="button"][aria-expanded], #center_col div[jsname][role="button"]'
+    );
+    for (const row of rows) {
+      let el = row.parentElement;
+      for (let i = 0; i < 6 && el && el.id !== 'rso' && el.id !== 'center_col'; i++) {
+        const n = el.querySelectorAll('[role="button"][aria-expanded], div[jsname][role="button"]').length;
+        if (n >= 3) {
+          // A real PAA block is mostly rows, not a result list with an accordion in it.
+          if (el.querySelectorAll('h3').length === 0 &&
+              !out.some(o => o.contains(el) || el.contains(o))) out.push(el);
+          break;
+        }
+        el = el.parentElement;
       }
     }
     // Label fallback
@@ -156,14 +171,19 @@ const SPS_CLASSIFY = (() => {
     let el = anchor.parentElement;
     for (let i = 0; i < 12 && el && el !== document.body; i++) {
       if (el.id && STOP.has(el.id)) break;
-      if (el.parentElement && el.parentElement.id && STOP.has(el.parentElement.id)) {
-        // Direct child of the results container: the canonical result block.
-        best = el;
-        break;
-      }
+
+      // Covering a second h3 means we have climbed into a group of results.
+      // This test must come BEFORE the direct-child shortcut below: Google
+      // wraps consecutive organic results in a single #rso > div, so accepting
+      // "direct child of the results container" without counting headings
+      // collapses the whole group into one element and every result after the
+      // first disappears.
       if (el.querySelectorAll('h3').length > 1) break;
       best = el;
-      el = el.parentElement;
+
+      const p = el.parentElement;
+      if (p && p.id && STOP.has(p.id)) break; // canonical single-result block
+      el = p;
     }
     return best;
   }

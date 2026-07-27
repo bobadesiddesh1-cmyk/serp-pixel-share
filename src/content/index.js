@@ -34,6 +34,8 @@
   async function scan() {
     if (state.busy) return state.scan;
     state.busy = true;
+    // Stay deaf to our own overlay writes and to the AI Overview expansion click.
+    state.stopObserving?.();
 
     try {
       state.settings = await getSettings();
@@ -120,13 +122,23 @@
 
       state.scan = { summary, elements: elements.map(serialise) };
 
-      SPS_OVERLAY.render(elements, {
-        settings: state.settings,
-        summary,
-        serpHeight,
-        serpTop,
-        showSitelinks: false
-      });
+      // Rendering clears and rebuilds every overlay node, which reads as a
+      // flicker. Google mutates the SERP constantly, so most re-scans produce
+      // an identical layout — skip the redraw unless something we draw changed.
+      const sig = elements
+        .map(e => `${e.type}:${e.yTop}:${e.height}:${Math.round((e.estCTR || 0) * 1e4)}:${e.actualCTR ?? ''}`)
+        .join('|') + `|${state.settings.overlayMode}|${state.settings.viewport}`;
+
+      if (sig !== state.overlaySig) {
+        state.overlaySig = sig;
+        SPS_OVERLAY.render(elements, {
+          settings: state.settings,
+          summary,
+          serpHeight,
+          serpTop,
+          showSitelinks: false
+        });
+      }
 
       chrome.runtime.sendMessage({ type: 'SPS_SCAN_RESULT', payload: state.scan });
       return state.scan;
@@ -137,6 +149,10 @@
       return null;
     } finally {
       state.busy = false;
+      state.markScanned?.();
+      // Let the DOM settle after our writes before listening again, so the
+      // overlay we just drew cannot register as a reason to redraw it.
+      setTimeout(() => state.startObserving?.(), 400);
     }
   }
 
@@ -151,15 +167,68 @@
     };
   }
 
-  // Re-scan when Google swaps results in without a navigation (continuous scroll,
-  // filter chips, AIO streaming in late).
+  // Re-scan when Google swaps results in without a navigation (continuous
+  // scroll, filter chips, AIO streaming in late).
+  //
+  // This has to be defensive. A scan renders overlay nodes and the AI Overview
+  // expansion clicks the page, so a naive observer treats the scan's own side
+  // effects as a reason to scan again and the page never settles. Three guards:
+  // ignore mutations we caused, stay disconnected while scanning, and never
+  // auto-scan more often than MIN_RESCAN_GAP.
+  const MIN_RESCAN_GAP = 3000;
   let debounce;
-  const obs = new MutationObserver(() => {
+  let lastScanAt = 0;
+  let observing = false;
+
+  function isOurs(node) {
+    if (!node || node.nodeType !== 1) return false;
+    if (node.id === 'sps-overlay-root') return true;
+    const cls = typeof node.className === 'string' ? node.className : '';
+    if (cls.startsWith('sps-') || cls.includes(' sps-')) return true;
+    return !!(node.closest && node.closest('#sps-overlay-root, .sps-hud'));
+  }
+
+  const obs = new MutationObserver(records => {
+    // Only structural changes to Google's own DOM count.
+    const relevant = records.some(r =>
+      r.type === 'childList' &&
+      !isOurs(r.target) &&
+      [...r.addedNodes, ...r.removedNodes].some(n => n.nodeType === 1 && !isOurs(n))
+    );
+    if (!relevant) return;
+
     clearTimeout(debounce);
-    debounce = setTimeout(() => { if (!state.busy) scan(); }, 900);
+    debounce = setTimeout(() => {
+      if (state.busy) return;
+      const since = Date.now() - lastScanAt;
+      if (since < MIN_RESCAN_GAP) {
+        // Too soon — check back once the floor has passed instead of dropping it.
+        clearTimeout(debounce);
+        debounce = setTimeout(() => { if (!state.busy) scan(); }, MIN_RESCAN_GAP - since);
+        return;
+      }
+      scan();
+    }, 900);
   });
+
   const target = document.querySelector('#center_col') || document.body;
-  obs.observe(target, { childList: true, subtree: true });
+  function startObserving() {
+    if (observing) return;
+    observing = true;
+    obs.observe(target, { childList: true, subtree: true });
+  }
+  function stopObserving() {
+    if (!observing) return;
+    observing = false;
+    obs.disconnect();
+  }
+
+  // Exposed so scan() can bracket its own DOM writes.
+  state.startObserving = startObserving;
+  state.stopObserving = stopObserving;
+  state.markScanned = () => { lastScanAt = Date.now(); };
+
+  startObserving();
 
   /**
    * Structural fingerprint of a node, for offline selector work.
@@ -244,6 +313,7 @@
     }
     if (msg.type === 'SPS_CLEAR_OVERLAY') {
       SPS_OVERLAY.clear();
+      state.overlaySig = null; // forget the cache, or the next scan skips redraw
       respond({ ok: true });
       return true;
     }

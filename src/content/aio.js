@@ -192,13 +192,25 @@ const SPS_AIO = (() => {
     return { cited: matched.length > 0, matched };
   }
 
+  // Expansion is a CLICK, and a click mutates the page. Re-running it on every
+  // scan makes the scan its own trigger: click -> mutation -> rescan -> click.
+  // Expand at most once per URL, and remember the outcome for later scans.
+  let expandState = { url: null, done: false, changed: false };
+
+  async function expandOnce(container) {
+    if (expandState.url === location.href && expandState.done) return expandState.changed;
+    expandState = { url: location.href, done: true, changed: false };
+    expandState.changed = await expand(container);
+    return expandState.changed;
+  }
+
   /** Full read. Call this once per scan. */
   async function read(ownedDomains) {
     const container = await waitForAIO();
     if (!container) {
       return { present: false, expanded: false, citations: [], cited: false, matched: [], geometry: null };
     }
-    const expanded = await expand(container);
+    const expanded = await expandOnce(container);
     const cites = citations(container);
     const { cited, matched } = citationMatch(cites, ownedDomains);
     return {
@@ -212,7 +224,7 @@ const SPS_AIO = (() => {
     };
   }
 
-  return { read, findContainer, expand, citations, citationMatch, waitForAIO, settle };
+  return { read, findContainer, expand, expandOnce, citations, citationMatch, waitForAIO, settle };
 })();
 
 if (typeof globalThis !== 'undefined') globalThis.SPS_AIO = SPS_AIO;
