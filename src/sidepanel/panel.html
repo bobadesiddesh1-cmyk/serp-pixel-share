@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SERP Pixel Share</title>
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body>
+
+<header class="hd">
+  <div class="hd__mark">
+    <span class="hd__rule" aria-hidden="true"></span>
+    <span class="hd__name">serp pixel share</span>
+  </div>
+  <button id="rescan" class="btn btn--sm" title="Re-scan the active results page">Re-scan</button>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button class="tab tab--on" data-view="scan" role="tab">Scan</button>
+  <button class="tab" data-view="aio" role="tab">AI Overview</button>
+  <button class="tab" data-view="batch" role="tab">Batch</button>
+  <button class="tab" data-view="setup" role="tab">Setup</button>
+</nav>
+
+<main>
+
+  <!-- ── Scan ─────────────────────────────────────────── -->
+  <section id="view-scan" class="view">
+    <div id="scan-empty" class="empty">
+      <p class="empty__h">No results page measured yet</p>
+      <p class="empty__b">Open a Google results page, then press Re-scan.</p>
+    </div>
+
+    <div id="scan-body" hidden>
+      <p id="scan-query" class="query"></p>
+
+      <div class="stats">
+        <div class="stat"><span class="stat__k">rank</span><span class="stat__v" id="s-rank">—</span></div>
+        <div class="stat"><span class="stat__k">effective</span><span class="stat__v" id="s-eff">—</span></div>
+        <div class="stat"><span class="stat__k">pixel share</span><span class="stat__v" id="s-pxs">—</span></div>
+        <div class="stat"><span class="stat__k">est. ctr</span><span class="stat__v" id="s-ctr">—</span></div>
+      </div>
+
+      <p id="verdict" class="verdict" hidden></p>
+
+      <h2 class="sec">Click share by element</h2>
+      <div id="bars" class="bars"></div>
+
+      <h2 class="sec">Pixel map</h2>
+      <div class="map">
+        <div id="map-col" class="map__col"></div>
+        <div id="map-key" class="map__key"></div>
+      </div>
+
+      <h2 class="sec">Elements</h2>
+      <div class="tblwrap"><table class="tbl" id="el-table">
+        <thead><tr><th>Element</th><th class="num">y</th><th class="num">px%</th><th class="num">est</th><th class="num">act</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+
+      <div class="row">
+        <button id="exp-scan" class="btn">Export scan CSV</button>
+        <button id="mode-toggle" class="btn">Overlay: inline</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── AI Overview ──────────────────────────────────── -->
+  <section id="view-aio" class="view" hidden>
+    <div id="aio-this" class="card">
+      <h2 class="sec sec--flush">This query</h2>
+      <div id="aio-status" class="mono">—</div>
+      <div id="aio-cites" class="cites"></div>
+    </div>
+
+    <h2 class="sec">Impression split across logged queries</h2>
+    <p class="note">Rebuilds CTR on impressions where no AI Overview fired. Needs a batch scan plus a connected GSC property.</p>
+    <button id="run-blue" class="btn btn--go">Rebuild blue-link CTR</button>
+    <div id="blue-out"></div>
+  </section>
+
+  <!-- ── Batch ────────────────────────────────────────── -->
+  <section id="view-batch" class="view" hidden>
+    <h2 class="sec sec--flush">Keyword list</h2>
+    <p class="note">One keyword per line. Each opens in a background tab, waits for the AI Overview to render, then logs the scan.</p>
+    <textarea id="batch-input" rows="7" placeholder="personal loan interest rate&#10;best credit card for fuel&#10;home loan eligibility"></textarea>
+    <div class="row">
+      <select id="batch-engine">
+        <option value="https://www.google.com/search?q=">google.com</option>
+        <option value="https://www.google.co.in/search?q=">google.co.in</option>
+        <option value="https://www.google.ae/search?q=">google.ae</option>
+      </select>
+      <button id="batch-go" class="btn btn--go">Run batch</button>
+      <button id="batch-stop" class="btn" hidden>Stop</button>
+    </div>
+    <div id="batch-prog" class="prog" hidden>
+      <div class="prog__bar"><div id="batch-fill" class="prog__fill"></div></div>
+      <div id="batch-count" class="mono"></div>
+    </div>
+    <div id="batch-out"></div>
+
+    <h2 class="sec">Scan log</h2>
+    <div id="log-summary" class="mono">—</div>
+    <div class="row">
+      <button id="exp-log" class="btn">Export log CSV</button>
+      <button id="clear-log" class="btn btn--danger">Clear log</button>
+    </div>
+  </section>
+
+  <!-- ── Setup ────────────────────────────────────────── -->
+  <section id="view-setup" class="view" hidden>
+    <h2 class="sec sec--flush">Your domains</h2>
+    <p class="note">One per line. Any result on these domains is marked as yours.</p>
+    <textarea id="owned" rows="3" placeholder="hdfcbank.com&#10;hdfc.bank.in"></textarea>
+    <button id="save-owned" class="btn">Save domains</button>
+
+    <h2 class="sec">Fold reference</h2>
+    <select id="viewport"></select>
+
+    <h2 class="sec">Search Console</h2>
+    <div id="gsc-state" class="mono">Not connected</div>
+    <div class="row">
+      <button id="gsc-connect" class="btn btn--go">Connect</button>
+      <button id="gsc-disconnect" class="btn" hidden>Disconnect</button>
+    </div>
+    <select id="gsc-prop" hidden></select>
+
+    <h2 class="sec">Model calibration</h2>
+    <p class="note">Solves feature-suppression coefficients from your own GSC data. Needs at least 8 logged single-feature queries per feature.</p>
+    <button id="calibrate" class="btn">Calibrate from GSC</button>
+    <div id="cal-out" class="mono"></div>
+
+    <p class="disclaimer">Estimated CTR is model output, not measured data. Label it that way in every client deliverable.</p>
+  </section>
+
+</main>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="../shared/constants.js"></script>
+<script src="panel.js"></script>
+</body>
+</html>

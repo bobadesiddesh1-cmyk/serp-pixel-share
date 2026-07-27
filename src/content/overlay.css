@@ -1,0 +1,184 @@
+/* SERP Pixel Share overlay.
+   Aesthetic: measuring instrument. Hairline rules, tabular mono numerals,
+   left-edge accent bars that never cover Google's own content.
+   All selectors namespaced .sps- to avoid colliding with Google's CSS. */
+
+:root {
+  --sps-ink: #16150f;
+  --sps-paper: #fbfaf7;
+  --sps-rule: #e2dfd6;
+  --sps-muted: #6b6a63;
+  --sps-amber: #c77d0a;
+  --sps-teal: #0b7a5e;
+  --sps-clay: #b04a22;
+  --sps-indigo: #4a47a3;
+  --sps-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --sps-ink: #edebe4;
+    --sps-paper: #1c1b18;
+    --sps-rule: #34332e;
+    --sps-muted: #9b998f;
+  }
+}
+
+.sps-label {
+  position: absolute;
+  z-index: 2147483000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  min-width: 92px;
+  padding: 4px 7px;
+  background: var(--sps-paper);
+  border: 1px solid var(--sps-rule);
+  border-radius: 3px;
+  font-family: var(--sps-mono);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+  pointer-events: auto;
+  cursor: default;
+}
+
+.sps-label__ctr {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--sps-ink);
+  letter-spacing: -0.02em;
+}
+
+.sps-label__unit,
+.sps-label__meta {
+  font-size: 9.5px;
+  color: var(--sps-muted);
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.sps-label__actual {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--sps-teal);
+  margin-top: 2px;
+}
+
+.sps-label--owned { border-color: var(--sps-teal); border-width: 1.5px; }
+.sps-label--owned .sps-label__ctr { color: var(--sps-teal); }
+.sps-label--aio { border-color: var(--sps-amber); border-width: 1.5px; }
+.sps-label--aio .sps-label__ctr { color: var(--sps-amber); }
+.sps-label--unclassified { border-color: #c0392b; border-style: dashed; }
+
+.sps-box {
+  position: absolute;
+  z-index: 2147482000;
+  pointer-events: none;
+  border-left: 3px solid var(--sps-muted);
+  background: transparent;
+}
+.sps-box__tag {
+  position: absolute;
+  top: 0;
+  left: 4px;
+  padding: 2px 6px;
+  font-family: var(--sps-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.03em;
+  color: var(--sps-paper);
+  background: var(--sps-muted);
+  border-radius: 0 0 3px 0;
+  white-space: nowrap;
+}
+
+.sps-fold {
+  position: absolute;
+  left: 0;
+  z-index: 2147482500;
+  height: 0;
+  border-top: 1.5px dashed var(--sps-ink);
+  opacity: 0.55;
+  pointer-events: none;
+}
+.sps-fold__tag {
+  position: absolute;
+  top: -8px;
+  padding: 1px 6px;
+  font-family: var(--sps-mono);
+  font-size: 9.5px;
+  color: var(--sps-ink);
+  background: var(--sps-paper);
+  border: 1px solid var(--sps-rule);
+  border-radius: 2px;
+  letter-spacing: 0.03em;
+}
+
+/* Signature element: the pixel ruler down the left gutter. */
+.sps-ruler {
+  position: absolute;
+  z-index: 2147482000;
+  width: 34px;
+  pointer-events: none;
+  border-right: 1px solid var(--sps-rule);
+}
+.sps-ruler__tick {
+  position: absolute;
+  right: 0;
+  width: 7px;
+  border-top: 1px solid var(--sps-rule);
+}
+.sps-ruler__tick--major { width: 14px; border-top-color: var(--sps-muted); }
+.sps-ruler__num {
+  position: absolute;
+  right: 17px;
+  transform: translateY(-50%);
+  font-family: var(--sps-mono);
+  font-size: 9px;
+  color: var(--sps-muted);
+  letter-spacing: 0.02em;
+}
+
+.sps-hud {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 2147483600;
+  min-width: 176px;
+  padding: 9px 11px;
+  background: var(--sps-paper);
+  border: 1px solid var(--sps-rule);
+  border-radius: 5px;
+  font-family: var(--sps-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--sps-ink);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.sps-hud__row { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; padding: 1px 0; }
+.sps-hud__row span:last-child { font-weight: 500; }
+.sps-hud__title {
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sps-muted);
+  padding-bottom: 5px;
+  margin-bottom: 5px;
+  border-bottom: 1px solid var(--sps-rule);
+}
+.sps-hud__btn {
+  margin-top: 7px;
+  width: 100%;
+  padding: 4px;
+  font-family: inherit;
+  font-size: 10.5px;
+  color: var(--sps-ink);
+  background: transparent;
+  border: 1px solid var(--sps-rule);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.sps-hud__btn:hover { background: var(--sps-rule); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .sps-label { transition: opacity 120ms ease-out; }
+}

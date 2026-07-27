@@ -1,0 +1,68 @@
+{
+  "manifest_version": 3,
+  "name": "SERP Pixel Share",
+  "version": "0.1.0",
+  "description": "Measures where clicks actually go on a Google SERP. Pixel position, effective rank, AI Overview citation share, and blue-link CTR.",
+  "minimum_chrome_version": "116",
+
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "sidePanel",
+    "tabs",
+    "identity"
+  ],
+
+  "host_permissions": [
+    "https://www.google.com/*",
+    "https://www.google.co.in/*",
+    "https://www.google.ae/*",
+    "https://searchconsole.googleapis.com/*"
+  ],
+
+  "background": {
+    "service_worker": "src/background/service-worker.js",
+    "type": "module"
+  },
+
+  "side_panel": {
+    "default_path": "src/sidepanel/panel.html"
+  },
+
+  "action": {
+    "default_title": "SERP Pixel Share"
+  },
+
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.google.com/search*",
+        "https://www.google.co.in/search*",
+        "https://www.google.ae/search*"
+      ],
+      "js": [
+        "src/shared/constants.js",
+        "src/model/estimate.js",
+        "src/content/measure.js",
+        "src/content/aio.js",
+        "src/content/classifier.js",
+        "src/content/overlay.js",
+        "src/content/index.js"
+      ],
+      "css": ["src/content/overlay.css"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "oauth2": {
+    "client_id": "REPLACE_WITH_YOUR_OAUTH_CLIENT_ID.apps.googleusercontent.com",
+    "scopes": ["https://www.googleapis.com/auth/webmasters.readonly"]
+  },
+
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
