@@ -16,10 +16,7 @@ const SPS_CLASSIFY = (() => {
   }
 
   function isOwned(domain, ownedDomains) {
-    if (!domain || !ownedDomains?.length) return false;
-    return ownedDomains
-      .map(d => d.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '').toLowerCase())
-      .some(o => domain === o || domain.endsWith('.' + o));
+    return SPS.hostMatchesAny(domain, ownedDomains);
   }
 
   // ---- Individual detectors. Each returns an array of raw nodes. ----
@@ -126,7 +123,7 @@ const SPS_CLASSIFY = (() => {
     // Fallback: cluster of forum-host links
     if (!out.length) {
       const forumLinks = [...document.querySelectorAll('#rso a[href^="http"]')]
-        .filter(a => SPS.FORUM_HOSTS.some(f => (hostOf(a.href) || '').endsWith(f)));
+        .filter(a => SPS.hostMatchesAny(hostOf(a.href), SPS.FORUM_HOSTS));
       if (forumLinks.length >= 2) {
         const parent = forumLinks[0].closest('#rso > div, div[jsname]');
         if (parent) out.push(parent);
@@ -298,7 +295,7 @@ const SPS_CLASSIFY = (() => {
 
     orgs.forEach((o, i) => {
       const domain = hostOf(o.anchor.href);
-      const isSocial = SPS.SOCIAL_HOSTS.some(s => (domain || '').endsWith(s));
+      const isSocial = SPS.hostMatchesAny(domain, SPS.SOCIAL_HOSTS);
       const type = isSocial ? T.SOCIAL : T.ORGANIC;
       push(list, o.block, type, {
         rank: i + 1,

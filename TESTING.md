@@ -22,8 +22,10 @@ yourself with the commands below.
 | Overlay at 1920 / 1440 / 390, both modes | verified — adds 0px page width, no column overlap | `node test/run-fixture.mjs --mode boxes` |
 
 ```bash
+node test/run-units.mjs                # domain matching + model edge cases
 node test/run-fixture.mjs              # inline overlay, three viewports
 node test/run-fixture.mjs --mode boxes # box overlay
+node test/run-stability.mjs            # rescan loop under DOM churn
 xvfb-run -a node test/run-panel.mjs    # side panel (needs a display; drop xvfb-run on a desktop)
 node test/run-csv.mjs                  # CSV exporters
 ```

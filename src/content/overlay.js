@@ -30,9 +30,11 @@ const SPS_OVERLAY = (() => {
 
   // ---- inline labels ----
 
+  /** Returns false when there is no gutter to draw into. */
   function drawInline(elements, ctx) {
     const r = root();
     const colX = labelColumnX();
+    if (colX == null) return false;
 
     for (const el of elements) {
       if (el.type === SPS.TYPES.SITELINK && !ctx.showSitelinks) continue;
@@ -83,6 +85,7 @@ const SPS_OVERLAY = (() => {
       d.title = buildTooltip(el);
       r.appendChild(d);
     }
+    return true;
   }
 
   function buildTooltip(el) {
@@ -102,15 +105,26 @@ const SPS_OVERLAY = (() => {
     return lines.join('\n');
   }
 
-  /** Park labels in the gutter right of the results column, or inside it if space is tight. */
+  const LABEL_W = 106;
+
+  /**
+   * X for the label gutter, or null when there is no gutter.
+   *
+   * Returning a position inside the results column would put the labels on top
+   * of Google's own text — which is the one thing the overlay must not do. On a
+   * narrow window the column fills the viewport and there is no gutter at all,
+   * so the caller falls back to box mode instead of covering content.
+   */
   function labelColumnX() {
     const col = document.querySelector('#center_col, #rso');
-    if (!col) return window.scrollX + window.innerWidth - 120;
+    if (!col) {
+      const room = window.innerWidth - LABEL_W - 12;
+      return room > 0 ? window.scrollX + room : null;
+    }
     const m = SPS_MEASURE.docOffset(col);
     const rightEdge = m.xLeft + m.width;
     const room = document.documentElement.scrollWidth - rightEdge;
-    if (room > 118) return rightEdge + 12;
-    return Math.max(4, rightEdge - 104);
+    return room >= LABEL_W + 12 ? rightEdge + 12 : null;
   }
 
   // ---- box mode ----
@@ -191,7 +205,7 @@ const SPS_OVERLAY = (() => {
 
   // ---- HUD ----
 
-  function drawHUD(summary) {
+  function drawHUD(summary, fellBackTo) {
     document.querySelectorAll('.sps-hud').forEach(n => n.remove());
     const h = document.createElement('div');
     h.className = 'sps-hud';
@@ -210,6 +224,8 @@ const SPS_OVERLAY = (() => {
       ['your est. ctr', summary.ownedCTR != null ? pct(summary.ownedCTR) : '—']
     ];
     if (summary.unclassified > 0) rows.push(['unclassified', summary.unclassified]);
+    // Say so rather than letting the mode silently disagree with the setting.
+    if (fellBackTo) rows.push(['overlay', fellBackTo + ' (no room)']);
 
     for (const [k, v] of rows) {
       const row = document.createElement('div');
@@ -241,9 +257,18 @@ const SPS_OVERLAY = (() => {
 
     drawRuler(ctx.serpHeight, ctx.serpTop);
     drawFold(ctx.settings.viewport || 'desktop');
-    if (mode === 'inline') drawInline(elements, ctx);
-    if (mode === 'boxes') drawBoxes(elements);
-    drawHUD(ctx.summary);
+
+    // Inline labels need a gutter beside the results column. When the window is
+    // too narrow to have one, fall back to boxes — the left-edge accent bands
+    // carry the same colour coding without sitting on top of Google's text.
+    let effective = mode;
+    if (mode === 'inline' && !drawInline(elements, ctx)) {
+      drawBoxes(elements);
+      effective = 'boxes';
+    } else if (mode === 'boxes') {
+      drawBoxes(elements);
+    }
+    drawHUD(ctx.summary, effective !== mode ? effective : null);
   }
 
   return { render, clear, drawHUD };

@@ -10,7 +10,20 @@ const pct = (v, d = 1) => (v == null || isNaN(v)) ? '—' : (v * 100).toFixed(d)
 const num = v => (v == null) ? '—' : Number(v).toLocaleString();
 
 function send(msg) {
-  return new Promise(resolve => chrome.runtime.sendMessage(msg, r => resolve(r || { ok: false })));
+  return new Promise(resolve => {
+    try {
+      chrome.runtime.sendMessage(msg, r => {
+        // Reading lastError is what marks it handled. Left unread, Chrome logs
+        // "Unchecked runtime.lastError" to the console on every dropped
+        // message — which is noise in the one place we assert zero errors.
+        const err = chrome.runtime.lastError;
+        if (err) return resolve({ ok: false, error: err.message });
+        resolve(r || { ok: false, error: 'No response from the extension.' });
+      });
+    } catch (e) {
+      resolve({ ok: false, error: String(e?.message || e) });
+    }
+  });
 }
 
 function toast(text, isErr = false) {

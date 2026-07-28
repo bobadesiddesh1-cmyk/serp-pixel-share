@@ -24,15 +24,23 @@ export async function recordScan(scan) {
   const log = got[SPS.STORAGE.SCANS] || {};
   const key = scan.summary.query.trim().toLowerCase();
 
-  const featuresAbove = [];
+  // featuresAbove means "features stacked above YOUR result". If we never
+  // located your result, that quantity is undefined — not "everything on the
+  // page". Recording the whole page would feed calibration rows claiming
+  // suppression above a listing that was not there.
+  const SUPPRESSORS = [SPS.TYPES.AI_OVERVIEW, SPS.TYPES.PAA, SPS.TYPES.AD, SPS.TYPES.SHOPPING,
+                       SPS.TYPES.LOCAL_PACK, SPS.TYPES.VIDEO, SPS.TYPES.FEATURED_SNIPPET,
+                       SPS.TYPES.IMAGE_PACK, SPS.TYPES.TOP_STORIES];
+  const collected = [];
+  let ownedFound = false;
   for (const el of scan.elements || []) {
-    if (el.type === SPS.TYPES.ORGANIC && el.owned) break;
-    if ([SPS.TYPES.AI_OVERVIEW, SPS.TYPES.PAA, SPS.TYPES.AD, SPS.TYPES.SHOPPING,
-         SPS.TYPES.LOCAL_PACK, SPS.TYPES.VIDEO, SPS.TYPES.FEATURED_SNIPPET,
-         SPS.TYPES.IMAGE_PACK, SPS.TYPES.TOP_STORIES].includes(el.type)) {
-      if (!featuresAbove.includes(el.type)) featuresAbove.push(el.type);
+    if (el.owned && (el.type === SPS.TYPES.ORGANIC || el.type === SPS.TYPES.SOCIAL)) {
+      ownedFound = true;
+      break;
     }
+    if (SUPPRESSORS.includes(el.type) && !collected.includes(el.type)) collected.push(el.type);
   }
+  const featuresAbove = ownedFound ? collected : [];
 
   log[key] = {
     query: scan.summary.query,
@@ -43,6 +51,7 @@ export async function recordScan(scan) {
     aioPixelShare: scan.summary.aioPixelShare,
     aioCitations: (scan.summary.aioCitations || []).map(c => c.domain).slice(0, 10),
     featuresAbove,
+    ownedFound,
     ownedRank: scan.summary.ownedRank,
     ownedEffectivePos: scan.summary.ownedEffectivePos,
     ownedCTR: scan.summary.ownedCTR,

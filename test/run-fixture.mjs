@@ -107,6 +107,8 @@ for (const vp of WIDTHS) {
     return {
       summary,
       citations: aio.citations.map(c => c.domain),
+      labelCount: document.querySelectorAll('.sps-label').length,
+      boxCount: document.querySelectorAll('.sps-box').length,
       overlayNodes: document.querySelectorAll('#sps-overlay-root > *').length,
       hud: !!document.querySelector('.sps-hud'),
       labelOverlaps: overlaps,
@@ -136,7 +138,15 @@ for (const vp of WIDTHS) {
   console.log(`elements ${s.count} | unclassified ${s.unclassified} | serpHeight ${s.serpHeight}`);
   console.log(`AIO present ${s.aioPresent} | expanded ${s.aioExpanded} | citations ${s.aioCitationCount} [${result.citations.join(', ')}] | cites you: ${s.aioCited}`);
   console.log(`owned rank ${s.ownedRank} -> effective ${s.ownedEffectivePos} | est CTR ${s.ownedCTR != null ? (s.ownedCTR * 100).toFixed(2) + '%' : '—'}`);
-  console.log(`overlay nodes ${result.overlayNodes} | HUD ${result.hud} | labels overlapping results column: ${result.labelOverlaps}`);
+  console.log(`overlay nodes ${result.overlayNodes} | HUD ${result.hud} | inline labels ${result.labelCount} | boxes ${result.boxCount}`);
+  console.log(`labels overlapping the results column: ${result.labelOverlaps}`);
+  // No gutter must mean box mode, never labels sitting on Google's text.
+  if (result.labelCount > 0 && result.labelOverlaps > 0) {
+    console.log('FAIL: inline labels drawn on top of the results column'); failures++;
+  }
+  if (MODE === 'inline' && result.labelCount === 0 && result.boxCount === 0) {
+    console.log('FAIL: inline mode drew neither labels nor a box fallback'); failures++;
+  }
   const added = result.docScrollW - result.widthBefore;
   console.log(`scrollWidth before overlay ${result.widthBefore} -> after ${result.docScrollW} (viewport ${vp.width})`);
   console.log(`width added BY THE OVERLAY: ${added}px ${added > 0 ? '<= OVERLAY WIDENS PAGE' : '(overlay adds nothing)'}`);

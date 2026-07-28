@@ -2,7 +2,7 @@
 // Attached to globalThis so content scripts (non-module) and the panel both read it.
 
 const SPS = {
-  VERSION: '0.2.1',
+  VERSION: '0.2.2',
 
   // Element taxonomy. Order = rough top-of-page precedence, not guaranteed.
   TYPES: {
@@ -95,6 +95,32 @@ const SPS = {
     gscProperty: '',
     showEstimates: true
   }
+};
+
+/**
+ * Registrable-domain match, anchored at a label boundary.
+ *
+ * `host.endsWith(domain)` is wrong and quietly so: "notgoogle.com" ends with
+ * "google.com", and "xyzx.com" ends with "x.com". Used for citation filtering
+ * that mistake DROPS real citations, which is the one number that has to be
+ * exact.
+ *
+ * @param {string} host   hostname, no scheme, no leading www.
+ * @param {string} domain registrable domain to test against
+ */
+SPS.hostMatches = function (host, domain) {
+  if (!host || !domain) return false;
+  const h = String(host).replace(/^www\./, '').toLowerCase().replace(/\.$/, '');
+  const d = String(domain).replace(/^https?:\/\//, '').replace(/^www\./, '')
+    .replace(/\/.*$/, '').toLowerCase().replace(/\.$/, '');
+  if (!h || !d) return false;
+  return h === d || h.endsWith('.' + d);
+};
+
+/** True if the host matches any domain in the list. */
+SPS.hostMatchesAny = function (host, domains) {
+  if (!host || !domains?.length) return false;
+  return domains.some(d => SPS.hostMatches(host, d));
 };
 
 if (typeof globalThis !== 'undefined') globalThis.SPS = SPS;

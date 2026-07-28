@@ -147,11 +147,15 @@ const SPS_AIO = (() => {
     } catch { return null; }
   }
 
+  // Anchored at a label boundary — see SPS.hostMatches. Plain endsWith() treats
+  // "notgoogle.com" as Google's own and silently drops it from the citation
+  // list, which undercounts exactly the number that has to be right.
   function isGoogleInternal(url) {
     const h = hostOf(url) || '';
-    return h.endsWith('google.com') || h.endsWith('gstatic.com') ||
-           h === 'support.google.com' || h === 'policies.google.com' ||
-           h.endsWith('youtube.com') && url.includes('/redirect');
+    if (!h) return false;
+    if (SPS.hostMatches(h, 'google.com') || SPS.hostMatches(h, 'gstatic.com')) return true;
+    if (SPS.hostMatches(h, 'youtube.com') && url.includes('/redirect')) return true;
+    return false;
   }
 
   /** Extract every cited source: domain, url, title, whether in the collapsed view. */
@@ -187,8 +191,7 @@ const SPS_AIO = (() => {
   /** Does the client own any cited domain? */
   function citationMatch(cites, ownedDomains) {
     if (!ownedDomains || !ownedDomains.length) return { cited: false, matched: [] };
-    const owned = ownedDomains.map(d => d.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '').toLowerCase());
-    const matched = cites.filter(c => owned.some(o => c.domain === o || c.domain.endsWith('.' + o)));
+    const matched = cites.filter(c => SPS.hostMatchesAny(c.domain, ownedDomains));
     return { cited: matched.length > 0, matched };
   }
 

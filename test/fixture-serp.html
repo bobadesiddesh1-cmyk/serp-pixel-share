@@ -14,6 +14,16 @@
   .u { color: #006621; font-size: 13px; }
   .sn { color: #4d5156; }
   .tall { min-height: 260px; }
+
+  /* Narrow viewport: the results column fills the window and there is no
+     gutter, the way Google's mobile layout behaves. Without this the 390px
+     test runs against a 1280px-wide page and never exercises the no-room
+     path in the overlay. */
+  @media (max-width: 700px) {
+    #cnt { padding: 12px 0 0 0; max-width: 100%; }
+    #center_col { width: 100%; }
+    #rhs { position: static; width: auto; }
+  }
 </style>
 </head>
 <body>

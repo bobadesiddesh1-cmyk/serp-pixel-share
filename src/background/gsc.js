@@ -112,6 +112,22 @@ export async function actualsFor(property, query, pageUrl) {
   });
   const data = rows[0] || null;
   bag[key] = { at: Date.now(), data };
+
+  // Drop expired entries, then cap the cache. chrome.storage.local is a ~10MB
+  // quota and nothing else prunes this — a long batch run would otherwise grow
+  // it until writes start failing.
+  const now = Date.now();
+  for (const [k, v] of Object.entries(bag)) {
+    if (!v || now - v.at > CACHE_TTL) delete bag[k];
+  }
+  const MAX_ENTRIES = 500;
+  const keys = Object.keys(bag);
+  if (keys.length > MAX_ENTRIES) {
+    keys.sort((a, b) => bag[a].at - bag[b].at)          // oldest first
+        .slice(0, keys.length - MAX_ENTRIES)
+        .forEach(k => delete bag[k]);
+  }
+
   await chrome.storage.local.set({ [SPS.STORAGE.GSC]: bag });
   return data;
 }
@@ -204,10 +220,16 @@ export async function calibrateFromGSC(property, scanLog, days = 90) {
   const log = {};
   for (const [q, v] of Object.entries(scanLog || {})) log[norm(q)] = v;
 
+  let skippedUnanchored = 0;
   const enriched = rows
     .map(r => {
       const e = log[norm(r.query)];
       if (!e) return null;
+      // Scans that never located the owned result cannot say what sat above it.
+      // `ownedFound` is absent on logs written before 0.2.2 — fall back to
+      // ownedRank so old entries are still judged, not silently trusted.
+      const anchored = e.ownedFound ?? (e.ownedRank != null);
+      if (!anchored) { skippedUnanchored++; return null; }
       return {
         query: r.query, position: r.position, ctr: r.ctr,
         aioPresent: e.aioPresent,
@@ -216,5 +238,9 @@ export async function calibrateFromGSC(property, scanLog, days = 90) {
     })
     .filter(Boolean);
 
-  return { sampleSize: enriched.length, coefficients: SPS_MODEL.calibrate(enriched) };
+  return {
+    sampleSize: enriched.length,
+    skippedUnanchored,
+    coefficients: SPS_MODEL.calibrate(enriched)
+  };
 }

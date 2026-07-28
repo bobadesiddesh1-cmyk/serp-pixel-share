@@ -1,5 +1,52 @@
 # Changelog
 
+## 0.2.2
+
+Full audit pass. Six bugs, none of which announce themselves at runtime — they
+produce plausible wrong numbers rather than errors.
+
+### Fixed
+
+- **Domain matching ran off the end of a label.** Every host test used
+  `endsWith()`, so `notgoogle.com` matched `google.com` and `xyzx.com` matched
+  `x.com`. Three consequences, worst first: legitimate AI Overview citations on
+  hosts merely *ending* in `google.com` or `gstatic.com` were discarded as
+  Google-internal, **undercounting citations**, which propagates straight into
+  blue-link CTR; unrelated domains were tagged as social profiles or forums; and
+  owned-domain matching had the same hole. Replaced with a single anchored
+  matcher, `SPS.hostMatches`, used everywhere. 22 unit tests cover it.
+- **The overlay covered Google's content on narrow windows.** When there was no
+  gutter beside the results column, inline labels were deliberately positioned
+  *inside* it, on top of the results. Inline mode now falls back to box mode
+  when no gutter exists, and the readout says which mode is actually in effect.
+  The fixture is responsive so the 390px run genuinely exercises this instead of
+  passing against a fixed-width page.
+- **Calibration could be fed rows describing a result that was not there.**
+  `featuresAbove` means "features stacked above your result", but when the scan
+  never located an owned result the loop collected every feature on the page.
+  Scans now record `ownedFound`, and calibration skips unanchored rows and
+  reports how many it dropped.
+- **The Search Console cache grew without bound.** Nothing pruned it, against a
+  ~10MB `chrome.storage.local` quota. Expired entries are now dropped and the
+  cache is capped at 500 entries, oldest evicted first.
+- **`chrome.runtime.lastError` was never read** in the side panel's message
+  helper, so any dropped message produced an "Unchecked runtime.lastError"
+  console error. It is now read and surfaced as a normal failed response.
+- **Owned results classified as social profiles never terminated the
+  `featuresAbove` walk**, because only `organic` was checked.
+
+### Added
+
+- `test/run-units.mjs` — 34 assertions covering domain matching and model edge
+  cases, no browser required.
+
+### Audited, no action needed
+
+Both `innerHTML` uses are static literals with no interpolation. No `eval`, no
+`new Function`, no inline handlers. Every division is guarded against a zero
+denominator. The outbound-call audit is unchanged: three `fetch` sites, both
+Google, nothing else.
+
 ## 0.2.1
 
 Fixes for two faults reported from live testing on Windows: the page churning
