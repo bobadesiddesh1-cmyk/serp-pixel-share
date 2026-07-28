@@ -24,52 +24,81 @@
   }
 }
 
-.sps-label {
+/* Chip: one line, anchored to the result's URL row. No border in light mode —
+   a shadow keeps it reading as an annotation laid on the page rather than a
+   second card competing with Google's own result. */
+
+.sps-chip-holder {
   position: absolute;
   z-index: 2147483000;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 1px;
-  min-width: 92px;
-  padding: 4px 7px;
+  text-align: right;
+  pointer-events: none;
+}
+
+.sps-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 9px;
+  max-width: 100%;
+  padding: 3px 10px;
+  border-radius: 7px;
   background: var(--sps-paper);
-  border: 1px solid var(--sps-rule);
-  border-radius: 3px;
-  font-family: var(--sps-mono);
+  border: 1px solid transparent;
+  box-shadow: 0 1px 1px rgba(23, 21, 15, .05), 0 4px 12px -6px rgba(23, 21, 15, .2);
+  font-family: -apple-system, "Segoe UI Variable Display", "Segoe UI", system-ui, Roboto, Arial, sans-serif;
   font-variant-numeric: tabular-nums;
-  line-height: 1.25;
+  line-height: 1.35;
+  white-space: nowrap;
   pointer-events: auto;
-  cursor: default;
+  cursor: help;
 }
 
-.sps-label__ctr {
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--sps-ink);
-  letter-spacing: -0.02em;
+@media (prefers-color-scheme: dark) {
+  .sps-chip {
+    border-color: var(--sps-rule);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, .4), 0 5px 14px -7px rgba(0, 0, 0, .75);
+  }
 }
 
-.sps-label__unit,
-.sps-label__meta {
+.sps-chip__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  align-self: center;
+}
+
+.sps-chip__seg {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+/* The label is the whole point — a number with no word beside it asks the
+   reader to already know what it measures. */
+.sps-chip__lab {
   font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: .07em;
   color: var(--sps-muted);
-  letter-spacing: 0.02em;
-  text-transform: none;
 }
 
-.sps-label__actual {
+.sps-chip__val {
   font-size: 12px;
-  font-weight: 500;
-  color: var(--sps-teal);
-  margin-top: 2px;
+  font-weight: 650;
+  letter-spacing: -.015em;
+  color: var(--sps-ink);
 }
 
-.sps-label--owned { border-color: var(--sps-teal); border-width: 1.5px; }
-.sps-label--owned .sps-label__ctr { color: var(--sps-teal); }
-.sps-label--aio { border-color: var(--sps-amber); border-width: 1.5px; }
-.sps-label--aio .sps-label__ctr { color: var(--sps-amber); }
-.sps-label--unclassified { border-color: #c0392b; border-style: dashed; }
+.sps-chip__sep {
+  width: 1px;
+  height: 12px;
+  flex: none;
+  align-self: center;
+  background: var(--sps-rule);
+}
+
+.sps-chip--unclassified { border-color: #c0392b; border-style: dashed; }
 
 .sps-box {
   position: absolute;
@@ -180,5 +209,5 @@
 .sps-hud__btn:hover { background: var(--sps-rule); }
 
 @media (prefers-reduced-motion: no-preference) {
-  .sps-label { transition: opacity 120ms ease-out; }
+  .sps-chip { transition: opacity 120ms ease-out; }
 }

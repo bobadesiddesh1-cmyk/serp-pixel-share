@@ -53,14 +53,15 @@ function renderScan(scan) {
   const s = scan.summary;
   $('#scan-query').textContent = s.query || '(no query)';
 
-  $('#s-rank').textContent = s.ownedRank ?? '—';
+  $('#s-rank').textContent = s.ownedRank != null ? '#' + s.ownedRank : '—';
   const eff = $('#s-eff');
-  eff.textContent = s.ownedEffectivePos ?? '—';
+  eff.textContent = s.ownedEffectivePos != null ? '#' + s.ownedEffectivePos : '—';
   eff.className = 'stat__v';
   if (s.ownedRank && s.ownedEffectivePos) {
     eff.classList.add(s.ownedEffectivePos > s.ownedRank + 1 ? 'stat__v--warn' : 'stat__v--good');
   }
   const own = scan.elements.find(e => e.owned && e.type === SPS.TYPES.ORGANIC);
+  renderHero(s, own);
   $('#s-pxs').textContent = own ? pct(own.pixelShare, 1) : '—';
   $('#s-ctr').textContent = own ? pct(own.estCTR) : '—';
 
@@ -70,6 +71,48 @@ function renderScan(scan) {
   renderTable(scan);
 
   $('#mode-toggle').textContent = 'Overlay: ' + (state.settings?.overlayMode || 'inline');
+}
+
+/** Screens are how people experience depth; raw pixels are how we measure it. */
+function foldHeight() {
+  const vp = state.settings?.viewport || 'desktop';
+  return (SPS.VIEWPORTS[vp] || SPS.VIEWPORTS.desktop).h;
+}
+
+function scrollWords(yTop) {
+  const screens = Math.max(0, Math.floor((yTop || 0) / foldHeight()));
+  return screens === 0 ? 'no scrolling' : screens === 1 ? 'one scroll' : screens + ' scrolls';
+}
+
+/**
+ * The hero states the subtraction. Rank and effective position shown as two
+ * equal tiles made the reader compute the finding themselves.
+ */
+function renderHero(s, own) {
+  const big = $('#s-drop');
+  const say = $('#s-say');
+  big.className = 'hero__big';
+
+  if (s.ownedRank == null || s.ownedEffectivePos == null) {
+    big.textContent = '—';
+    say.textContent = s.ownedRank == null
+      ? 'None of your domains appear in these results. Add or check them in Setup.'
+      : 'Not enough to estimate a position for this result.';
+    return;
+  }
+
+  const drop = s.ownedEffectivePos - s.ownedRank;
+  big.textContent = drop > 0 ? '−' + drop : '0';
+  big.classList.add(drop >= 4 ? 'hero__big--bad' : drop >= 2 ? 'hero__big--warn' : 'hero__big--ok');
+
+  const where = own ? `At ${num(own.yTop)}px, ${scrollWords(own.yTop)} needed,` : 'Here,';
+  const above = (s.aioPresent ? 'an AI Overview' : null);
+  const ads = s.adCount ? `${s.adCount} paid ad${s.adCount > 1 ? 's' : ''}` : null;
+  const stack = [above, ads].filter(Boolean).join(' and ');
+
+  say.textContent = drop > 0
+    ? `You rank #${s.ownedRank}. ${where}${stack ? ' under ' + stack + ',' : ''} the page treats you like #${s.ownedEffectivePos}.`
+    : `You rank #${s.ownedRank} and the layout is not costing you position. ${where.replace(/,$/, '.')}`;
 }
 
 function renderVerdict(s, own) {
@@ -147,6 +190,30 @@ function renderMap(scan) {
   const col = $('#map-col');
   const key = $('#map-key');
   col.textContent = ''; key.textContent = '';
+
+  // A coloured column with no scale is decoration. Say how tall the page is,
+  // in both pixels and the thing a person actually does — scrolling.
+  const total = scan.summary.serpHeight || 0;
+  const fold = foldHeight();
+  const screens = Math.max(1, Math.ceil(total / fold));
+  const vpName = state.settings?.viewport || 'desktop';
+  $('#map-meta').textContent = `${num(total)}px · ${screens} screen${screens > 1 ? 's' : ''}`;
+  $('#map-scale').textContent =
+    `One screen is ${num(fold)}px at the ${vpName} fold reference, so this page is ` +
+    `${screens} screenful${screens > 1 ? 's' : ''} tall. Change the reference in Setup.`;
+  $('#gloss-depth').textContent =
+    `How far down the page a block starts. Your screen shows about ${num(fold)}px at a time ` +
+    `(${vpName} fold reference), so a block at ${num(fold - 200)}px is visible immediately and ` +
+    `one at ${num(fold * 2 + 200)}px is two scrolls away.`;
+
+  // Screen-edge markers, so a band's position can be read against something.
+  for (let i = 1; i < screens && i <= 6; i++) {
+    const mark = document.createElement('div');
+    mark.className = 'map__fold';
+    mark.style.top = ((i * fold) / total) * 100 + '%';
+    mark.dataset.label = i === 1 ? '1 scroll' : i + ' scrolls';
+    col.appendChild(mark);
+  }
 
   const rows = scan.elements
     .filter(e => e.type !== SPS.TYPES.SITELINK && e.height > 24)

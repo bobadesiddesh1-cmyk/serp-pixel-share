@@ -91,6 +91,7 @@ for (const vp of WIDTHS) {
     // Baseline width BEFORE the overlay exists, so we can attribute any
     // horizontal overflow to the overlay rather than to the page itself.
     const widthBefore = document.documentElement.scrollWidth;
+    const heightBefore = document.documentElement.scrollHeight;
 
     SPS_OVERLAY.render(elements, {
       settings: { overlayMode: mode, viewport: 'desktop' },
@@ -99,20 +100,30 @@ for (const vp of WIDTHS) {
 
     // Does the overlay overlap the results column? That is the layout-break test.
     const col = document.querySelector('#center_col').getBoundingClientRect();
-    const overlaps = [...document.querySelectorAll('.sps-label')].filter(n => {
+    // A chip anchored to the URL row is INSIDE the column by design — that is
+    // the point of the placement. What must never happen is a chip sitting on
+    // top of the URL text itself, so test against the cite, not the column.
+    const overlaps = [...document.querySelectorAll('.sps-chip')].filter(n => {
       const r = n.getBoundingClientRect();
-      return r.left < col.right && r.right > col.left;
+      return [...document.querySelectorAll('cite')].some(c => {
+        const cr = c.getBoundingClientRect();
+        return cr.width > 0 && r.left < cr.right && r.right > cr.left
+            && r.top < cr.bottom && r.bottom > cr.top;
+      });
     }).length;
 
     return {
       summary,
       citations: aio.citations.map(c => c.domain),
-      labelCount: document.querySelectorAll('.sps-label').length,
+      labelCount: document.querySelectorAll('.sps-chip').length,
+      onUrlRow: document.querySelectorAll('.sps-chip-holder').length,
       boxCount: document.querySelectorAll('.sps-box').length,
       overlayNodes: document.querySelectorAll('#sps-overlay-root > *').length,
       hud: !!document.querySelector('.sps-hud'),
       labelOverlaps: overlaps,
       widthBefore,
+      heightBefore,
+      docScrollH: document.documentElement.scrollHeight,
       docScrollW: document.documentElement.scrollWidth,
       bodyScrollW: document.body.scrollWidth,
       rows: elements.map(e => ({
@@ -141,11 +152,19 @@ for (const vp of WIDTHS) {
   console.log(`overlay nodes ${result.overlayNodes} | HUD ${result.hud} | inline labels ${result.labelCount} | boxes ${result.boxCount}`);
   console.log(`labels overlapping the results column: ${result.labelOverlaps}`);
   // No gutter must mean box mode, never labels sitting on Google's text.
-  if (result.labelCount > 0 && result.labelOverlaps > 0) {
-    console.log('FAIL: inline labels drawn on top of the results column'); failures++;
+  if (result.labelOverlaps > 0) {
+    console.log('FAIL: chips drawn on top of the URL text'); failures++;
   }
-  if (MODE === 'inline' && result.labelCount === 0 && result.boxCount === 0) {
-    console.log('FAIL: inline mode drew neither labels nor a box fallback'); failures++;
+  const addedH = result.docScrollH - result.heightBefore;
+  console.log(`height added BY THE OVERLAY: ${addedH}px ${addedH > 0 ? '<= OVERLAY LENGTHENS PAGE' : '(overlay adds nothing)'}`);
+  if (addedH > 0) { console.log('FAIL: overlay lengthened the page'); failures++; }
+  // Every annotatable element must carry SOMETHING. A dropped annotation reads
+  // as an undetected element, which is a worse lie than a mixed overlay.
+  const annotatable = result.rows.filter(r => r.type !== 'sitelink' && r.type !== 'related_search').length;
+  const annotated = result.labelCount + result.boxCount;
+  console.log(`annotated ${annotated} of ${annotatable} annotatable elements`);
+  if (MODE === 'inline' && annotated < annotatable) {
+    console.log(`FAIL: ${annotatable - annotated} elements silently unannotated`); failures++;
   }
   const added = result.docScrollW - result.widthBefore;
   console.log(`scrollWidth before overlay ${result.widthBefore} -> after ${result.docScrollW} (viewport ${vp.width})`);

@@ -30,78 +30,207 @@ const SPS_OVERLAY = (() => {
 
   // ---- inline labels ----
 
-  /** Returns false when there is no gutter to draw into. */
-  function drawInline(elements, ctx) {
+  // ---- chip ----------------------------------------------------------------
+  //
+  // One line, anchored to the result's URL row. That row is short, so the space
+  // to its right is already empty, and sitting inside the result keeps us out of
+  // the right-hand gutter that other SEO extensions compete for.
+  //
+  // Every value carries its label. A bare "2 -> 5" assumes the reader has been
+  // told what the arrow means; "ranks #2 \u00b7 acts like #5" assumes nothing.
+
+  const ORGANIC_TYPES = [SPS.TYPES.ORGANIC, SPS.TYPES.SOCIAL, SPS.TYPES.SITELINK];
+
+  function seg(parts) {
+    const s = document.createElement('span');
+    s.className = 'sps-chip__seg';
+    for (const [kind, text, colour] of parts) {
+      const n = document.createElement('span');
+      n.className = kind === 'lab' ? 'sps-chip__lab' : 'sps-chip__val';
+      n.textContent = text;
+      if (colour) n.style.color = colour;
+      s.appendChild(n);
+    }
+    return s;
+  }
+
+  function divider() {
+    const d = document.createElement('span');
+    d.className = 'sps-chip__sep';
+    return d;
+  }
+
+  // Severity of the rank-to-effective drop, drawn from the existing palette:
+  // coral for a heavy fall, amber for moderate, teal for negligible.
+  function severityColour(rank, effectivePos) {
+    const drop = (effectivePos || 0) - (rank || 0);
+    if (drop >= 4) return SPS.COLORS.ad;
+    if (drop >= 2) return SPS.COLORS.ai_overview;
+    return SPS.COLORS.OWNED;
+  }
+
+  /**
+   * Segments in priority order. Index 0 is shed last.
+   * The rank gap is the finding, so it outlives the CTR when space runs out.
+   */
+  function chipSegments(el) {
+    const out = [];
+
+    if (ORGANIC_TYPES.includes(el.type)) {
+      if (el.rank) {
+        const parts = [['lab', 'ranks'], ['val', '#' + el.rank]];
+        if (el.effectivePos && el.effectivePos > el.rank) {
+          parts.push(['lab', 'acts like']);
+          parts.push(['val', '#' + el.effectivePos, severityColour(el.rank, el.effectivePos)]);
+        }
+        out.push(seg(parts));
+      }
+      const ctr = [['lab', 'est. CTR'], ['val', pct(el.estCTR)]];
+      if (el.actualCTR != null) { ctr.push(['lab', 'actual']); ctr.push(['val', pct(el.actualCTR)]); }
+      out.push(seg(ctr));
+      return out;
+    }
+
+    if (el.type === SPS.TYPES.AI_OVERVIEW) {
+      const n = el.citations ? el.citations.length : 0;
+      out.push(seg(el.cited
+        ? [['lab', 'cites you'], ['val', (el.matched?.length || 1) + ' of ' + n, SPS.COLORS.OWNED]]
+        : [['lab', 'cites'], ['val', n + ' sources'], ['lab', 'not you']]));
+      out.push(seg([['lab', 'page height'], ['val', pct(el.pixelShare, 0)]]));
+      return out;
+    }
+
+    out.push(seg([['lab', 'est. clicks'], ['val', pct(el.estCTR)]]));
+    out.push(seg([['lab', 'page height'], ['val', pct(el.pixelShare, 0)]]));
+    return out;
+  }
+
+  /** The URL row. <cite> is semantic and long-lived \u2014 not a rotating class. */
+  function urlAnchor(node) {
+    if (!node || !node.querySelector) return null;
+    const cite = node.querySelector('cite');
+    return cite && SPS_MEASURE.isRendered(cite) ? cite : null;
+  }
+
+  function buildChip(el) {
+    const chip = document.createElement('span');
+    chip.className = 'sps-chip';
+    if (el.type === SPS.TYPES.UNCLASSIFIED) chip.classList.add('sps-chip--unclassified');
+
+    const dot = document.createElement('span');
+    dot.className = 'sps-chip__dot';
+    dot.style.background = (el.owned && el.type !== SPS.TYPES.AI_OVERVIEW)
+      ? SPS.COLORS.OWNED
+      : (SPS.COLORS[el.type] || SPS.COLORS.organic);
+    chip.appendChild(dot);
+
+    const segs = chipSegments(el);
+    segs.forEach((s, i) => { if (i) chip.appendChild(divider()); chip.appendChild(s); });
+    chip._segs = segs;
+    chip.title = buildTooltip(el);
+    return chip;
+  }
+
+  /**
+   * Shed segments, lowest priority first, until the chip fits the space left
+   * over on the URL row. Anything shed stays in the tooltip and the panel.
+   */
+  function fitChip(chip, available) {
+    let guard = 0;
+    while (chip.getBoundingClientRect().width > available && guard++ < 6) {
+      const segs = [...chip.querySelectorAll('.sps-chip__seg')];
+      if (segs.length <= 1) break;
+      const last = segs[segs.length - 1];
+      const sep = last.previousElementSibling;
+      last.remove();
+      if (sep && sep.classList.contains('sps-chip__sep')) sep.remove();
+    }
+    return chip.getBoundingClientRect().width <= available;
+  }
+
+  /**
+   * Draw a chip per element. Anything that cannot be placed without covering
+   * content is returned so the caller can give it a box instead — an element
+   * that silently loses its annotation reads as an element that was never
+   * detected, which is a worse failure than a mixed overlay.
+   */
+  function drawChips(elements, ctx) {
     const r = root();
-    const colX = labelColumnX();
-    if (colX == null) return false;
+    const gutterX = labelColumnX();
+    const unplaced = [];
+    let placed = 0;
 
     for (const el of elements) {
       if (el.type === SPS.TYPES.SITELINK && !ctx.showSitelinks) continue;
       if (el.type === SPS.TYPES.RELATED_SEARCH) continue;
 
-      const d = document.createElement('div');
-      d.className = 'sps-label';
-      if (el.owned && el.type !== SPS.TYPES.AI_OVERVIEW) d.classList.add('sps-label--owned');
-      if (el.type === SPS.TYPES.AI_OVERVIEW) d.classList.add('sps-label--aio');
-      if (el.type === SPS.TYPES.UNCLASSIFIED) d.classList.add('sps-label--unclassified');
+      const chip = buildChip(el);
+      const holder = document.createElement('div');
+      holder.className = 'sps-chip-holder';
+      holder.appendChild(chip);
+      r.appendChild(holder);
 
-      d.style.top = el.yTop + 'px';
-      d.style.left = colX + 'px';
+      const cite = urlAnchor(el.node);
+      const block = { left: el.xLeft ?? 0, width: el.width || 0 };
 
-      const ctr = document.createElement('div');
-      ctr.className = 'sps-label__ctr';
-      ctr.textContent = pct(el.estCTR);
-      d.appendChild(ctr);
-
-      const unit = document.createElement('div');
-      unit.className = 'sps-label__unit';
-      unit.textContent = 'est. CTR';
-      d.appendChild(unit);
-
-      if (el.actualCTR != null) {
-        const a = document.createElement('div');
-        a.className = 'sps-label__actual';
-        a.textContent = pct(el.actualCTR);
-        d.appendChild(a);
-        const au = document.createElement('div');
-        au.className = 'sps-label__unit';
-        au.textContent = 'GSC actual';
-        d.appendChild(au);
+      if (cite) {
+        // Right-align on the URL row, in the space the URL itself does not use.
+        const c = SPS_MEASURE.docOffset(cite);
+        const available = (block.left + block.width) - (c.xLeft + c.width) - 16;
+        holder.style.top = (c.yTop - 3) + 'px';
+        holder.style.left = block.left + 'px';
+        holder.style.width = block.width + 'px';
+        if (fitChip(chip, Math.max(0, available))) { placed++; continue; }
+        // Did not fit even stripped back: fall through to the gutter.
       }
 
-      const meta = document.createElement('div');
-      meta.className = 'sps-label__meta';
-      meta.textContent = 'y ' + el.yTop.toLocaleString();
-      d.appendChild(meta);
-
-      if (el.type === SPS.TYPES.ORGANIC && el.effectivePos && el.rank) {
-        const ep = document.createElement('div');
-        ep.className = 'sps-label__meta';
-        ep.textContent = '#' + el.rank + ' \u2192 eff ' + el.effectivePos;
-        d.appendChild(ep);
+      if (gutterX != null) {
+        holder.style.top = el.yTop + 'px';
+        holder.style.left = gutterX + 'px';
+        holder.style.width = 'auto';
+        holder.style.textAlign = 'left';
+        placed++;
+        continue;
       }
 
-      d.title = buildTooltip(el);
-      r.appendChild(d);
+      holder.remove();
+      unplaced.push(el);
     }
-    return true;
+
+    return { placed, unplaced };
   }
 
-  function buildTooltip(el) {
-    const lines = [
-      el.label + (el.rank ? ' #' + el.rank : ''),
-      el.domain ? el.domain : null,
-      'Pixel y: ' + el.yTop + '–' + el.yBottom + ' (' + el.height + 'px tall)',
-      'Pixel share: ' + pct(el.pixelShare, 1),
-      'Est. click share: ' + pct(el.shareOfClicks, 1),
-      el.effectivePos ? 'Effective position: ' + el.effectivePos : null,
-      el.type === SPS.TYPES.AI_OVERVIEW && el.citations
-        ? 'Cites ' + el.citations.length + ' sources' + (el.cited ? ' — includes you' : ' — you not cited')
-        : null,
-      el.foldFlags ? 'Above fold: ' + Object.entries(el.foldFlags)
-          .filter(([, v]) => v).map(([k]) => k).join(', ') || 'none' : null
-    ].filter(Boolean);
+  /**
+   * Written as sentences, not field names. This is where depth lives now that
+   * the chip no longer shows it — so it has to explain itself, including what a
+   * screenful actually is.
+   */
+  function buildTooltip(el, viewport = 'desktop') {
+    const cost = SPS_MEASURE.scrollCost(el.yTop, viewport);
+    const depth = cost.screens === 0
+      ? `It starts ${el.yTop.toLocaleString()}px down; your screen shows about ` +
+        `${cost.foldHeight.toLocaleString()}px, so it is visible without scrolling.`
+      : `It starts ${el.yTop.toLocaleString()}px down — a visitor scrolls ` +
+        `${cost.label.replace(' scroll', ' time').replace(' scrolls', ' times')} to reach it.`;
+
+    const lines = [];
+    lines.push(el.label + (el.rank ? ' #' + el.rank : '') + (el.domain ? ' — ' + el.domain : ''));
+
+    if (el.estCTR != null) {
+      lines.push(`Estimated CTR ${pct(el.estCTR)}${el.actualCTR != null
+        ? `, against ${pct(el.actualCTR)} actual from Search Console.` : '. Model output, not measured.'}`);
+    }
+    if (el.rank && el.effectivePos && el.effectivePos > el.rank) {
+      lines.push(`You rank #${el.rank}, but this page's layout means it performs like a #${el.effectivePos}.`);
+    }
+    lines.push(depth);
+    lines.push(`It takes up ${pct(el.pixelShare, 0)} of the page's height.`);
+
+    if (el.type === SPS.TYPES.AI_OVERVIEW && el.citations) {
+      lines.push(el.cited
+        ? `Cites ${el.citations.length} sources and one of them is yours.`
+        : `Cites ${el.citations.length} sources; none of them are yours.`);
+    }
     return lines.join('\n');
   }
 
@@ -262,9 +391,16 @@ const SPS_OVERLAY = (() => {
     // too narrow to have one, fall back to boxes — the left-edge accent bands
     // carry the same colour coding without sitting on top of Google's text.
     let effective = mode;
-    if (mode === 'inline' && !drawInline(elements, ctx)) {
-      drawBoxes(elements);
-      effective = 'boxes';
+    if (mode === 'inline') {
+      const { placed, unplaced } = drawChips(elements, ctx);
+      if (!placed) {
+        drawBoxes(elements);
+        effective = 'boxes';
+      } else if (unplaced.length) {
+        // Chips where they fit, bands for the rest. Nothing goes unannotated.
+        drawBoxes(unplaced);
+        effective = 'inline + ' + unplaced.length + ' boxed';
+      }
     } else if (mode === 'boxes') {
       drawBoxes(elements);
     }

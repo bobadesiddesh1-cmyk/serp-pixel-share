@@ -73,12 +73,33 @@ const SPS_MEASURE = (() => {
     return Math.round(base + inflate);
   }
 
+  /**
+   * Depth expressed as what the visitor has to DO, not as a raw number.
+   * "826px" only means something to someone who already knows the fold height,
+   * which is an assumption the UI should not make about a client reading a report.
+   */
+  function scrollCost(yTop, viewport = 'desktop') {
+    const h = (SPS.VIEWPORTS[viewport] || SPS.VIEWPORTS.desktop).h;
+    const screens = Math.max(0, Math.floor((yTop || 0) / h));
+    const label = screens === 0 ? 'no scroll'
+                : screens === 1 ? '1 scroll'
+                : screens + ' scrolls';
+    return { screens, label, foldHeight: h };
+  }
+
+  /** Total screenfuls a page occupies, for the panel's map header. */
+  function screenCount(totalHeight, viewport = 'desktop') {
+    const h = (SPS.VIEWPORTS[viewport] || SPS.VIEWPORTS.desktop).h;
+    return Math.max(1, Math.ceil((totalHeight || 0) / h));
+  }
+
   function pixelShare(height, total) {
     if (!total) return 0;
     return Math.round((height / total) * 1000) / 1000;
   }
 
-  return { docOffset, isRendered, serpHeight, serpTop, foldFlags, projectMobileY, pixelShare };
+  return { docOffset, isRendered, serpHeight, serpTop, foldFlags, projectMobileY, pixelShare,
+           scrollCost, screenCount };
 })();
 
 if (typeof globalThis !== 'undefined') globalThis.SPS_MEASURE = SPS_MEASURE;

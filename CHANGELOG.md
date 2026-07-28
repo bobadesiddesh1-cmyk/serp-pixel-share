@@ -1,5 +1,56 @@
 # Changelog
 
+## 0.3.0
+
+Overlay and side panel redesigned. The old label put four values at four
+near-identical sizes, so the rank-to-effective drop — the entire point of the
+tool — read as the least important thing in the box.
+
+### Changed
+
+- **The label is now a one-line chip anchored to the result's URL row.** That
+  row is short, so the space beside it is already empty, and sitting inside the
+  result keeps the overlay out of the right-hand gutter that other SEO
+  extensions compete for. `<cite>` is the anchor — semantic and long-lived,
+  not a rotating class.
+- **Every value carries its label.** `2 -> 5` became
+  `ranks #2 · acts like #5`. The arrow assumed the reader had been told what it
+  meant; the words assume nothing. Same for `est. CTR`, `page height`,
+  `est. clicks`, `cites you`.
+- **Monospace is gone from the overlay.** It read as debug output, and nothing
+  in a one-line chip needs fixed-width alignment.
+- **Depth moved out of the chip** and into the tooltip and panel, where there is
+  room to explain it. It is now expressed as what the visitor has to *do* —
+  `no scroll`, `1 scroll`, `2 scrolls` — because a raw pixel offset only means
+  something to someone who already knows the fold height.
+- **The panel leads with the finding.** Four equal stat tiles became one number
+  — positions lost — and a sentence stating it. The subtraction was the insight;
+  it should not have been homework.
+- **The pixel map has a scale.** Screen-edge markers labelled in scrolls, plus
+  the page height in pixels and screenfuls. Previously it was colour with
+  nothing to measure against.
+- **A glossary ships in the Scan view** — est. CTR, acts like #N, depth and
+  scrolls, page height share. Always visible, not a tooltip a client will never
+  hover, and the depth entry rewrites itself to match the chosen fold reference.
+- **The custom hover panel was removed** in favour of the browser's own tooltip.
+  Nothing to dismiss and nothing that can cover a result.
+
+### Fixed
+
+- **Elements could silently lose their annotation.** When a chip did not fit and
+  no gutter existed, it was dropped — which reads as an element that was never
+  detected. Anything that cannot be placed now gets a box instead, and the test
+  suite asserts every annotatable element carries something.
+
+### Added
+
+- Zero-added-**height** assertion in the fixture test, beside the existing
+  zero-added-width one. The overlay is absolutely positioned and must never
+  lengthen the page.
+- `SPS_MEASURE.scrollCost()` and `screenCount()`.
+- The fixture now uses `<cite>` for result URLs, so the chip's anchor is
+  exercised rather than assumed.
+
 ## 0.2.2
 
 Full audit pass. Six bugs, none of which announce themselves at runtime — they

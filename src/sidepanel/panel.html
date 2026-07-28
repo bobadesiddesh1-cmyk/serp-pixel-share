@@ -35,10 +35,20 @@
     <div id="scan-body" hidden>
       <p id="scan-query" class="query"></p>
 
+      <!-- The finding is the subtraction. Showing rank and effective as two
+           equal tiles left the reader to do it themselves. -->
+      <div class="hero">
+        <div class="hero__num">
+          <span class="hero__big" id="s-drop">—</span>
+          <span class="hero__unit">positions lost</span>
+        </div>
+        <p class="hero__say" id="s-say"></p>
+      </div>
+
       <div class="stats">
-        <div class="stat"><span class="stat__k">rank</span><span class="stat__v" id="s-rank">—</span></div>
-        <div class="stat"><span class="stat__k">effective</span><span class="stat__v" id="s-eff">—</span></div>
-        <div class="stat"><span class="stat__k">pixel share</span><span class="stat__v" id="s-pxs">—</span></div>
+        <div class="stat"><span class="stat__k">ranks</span><span class="stat__v" id="s-rank">—</span></div>
+        <div class="stat"><span class="stat__k">acts like</span><span class="stat__v" id="s-eff">—</span></div>
+        <div class="stat"><span class="stat__k">page height</span><span class="stat__v" id="s-pxs">—</span></div>
         <div class="stat"><span class="stat__k">est. ctr</span><span class="stat__v" id="s-ctr">—</span></div>
       </div>
 
@@ -47,11 +57,12 @@
       <h2 class="sec">Click share by element</h2>
       <div id="bars" class="bars"></div>
 
-      <h2 class="sec">Pixel map</h2>
+      <h2 class="sec">Pixel map <span id="map-meta" class="sec__meta"></span></h2>
       <div class="map">
         <div id="map-col" class="map__col"></div>
         <div id="map-key" class="map__key"></div>
       </div>
+      <p id="map-scale" class="note note--map"></p>
 
       <h2 class="sec">Elements</h2>
       <div class="tblwrap"><table class="tbl" id="el-table">
@@ -63,6 +74,25 @@
         <button id="exp-scan" class="btn">Export scan CSV</button>
         <button id="mode-toggle" class="btn">Overlay: inline</button>
       </div>
+
+      <!-- Always visible, never a tooltip. These are the terms that end up in
+           client deliverables, so they have to be defined where they are read. -->
+      <h2 class="sec">What these numbers mean</h2>
+      <dl class="gloss">
+        <dt>Est. CTR</dt>
+        <dd>The share of searchers we estimate will click a listing where it currently sits.
+            Model output, not measured data. Connect Search Console to see your actual beside it.</dd>
+        <dt>Acts like #N</dt>
+        <dd>The rank whose normal click-through rate matches what we estimate you will get from
+            where you actually sit. A translation of your position into felt performance — not a
+            second ranking.</dd>
+        <dt>Depth, and scrolls</dt>
+        <dd id="gloss-depth">How far down the page a block starts. Your fold reference decides how
+            much fits on one screen, so the same page reads differently on desktop and mobile.</dd>
+        <dt>Page height share</dt>
+        <dd>How much of the page's total vertical space a block occupies. An AI Overview at 31% is
+            31% of everything a visitor scrolls past.</dd>
+      </dl>
     </div>
   </section>
 

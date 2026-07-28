@@ -116,6 +116,13 @@ const r = await panel.evaluate(() => ({
   aioStatus: document.querySelector('#aio-status').textContent.trim(),
   cites: document.querySelectorAll('#aio-cites > *').length,
   estLabelled: /est/i.test(document.body.innerText),
+  drop: document.querySelector('#s-drop').textContent.trim(),
+  say: document.querySelector('#s-say').textContent.trim(),
+  mapMeta: document.querySelector('#map-meta').textContent.trim(),
+  mapScale: document.querySelector('#map-scale').textContent.trim(),
+  foldMarks: document.querySelectorAll('.map__fold').length,
+  glossTerms: document.querySelectorAll('.gloss dt').length,
+  glossDepth: document.querySelector('#gloss-depth').textContent.trim(),
 }));
 check('query shown', r.query.length > 0, r.query);
 check('rank metric', r.rank !== '—', r.rank);
@@ -134,6 +141,13 @@ check('element table rows', r.rows === expectedRows, `${r.rows} rows vs ${expect
 check('AIO status line', r.aioStatus.length > 0, r.aioStatus.slice(0, 70));
 check('AIO citations listed', r.cites > 0, r.cites + ' citations');
 check('output labelled as estimated', r.estLabelled);
+check('hero states the drop', /^[−-]?\d+$/.test(r.drop), r.drop);
+check('hero explains it in a sentence', r.say.length > 30, r.say.slice(0, 90));
+check('pixel map declares height and screens', /px .* screen/.test(r.mapMeta), r.mapMeta);
+check('pixel map has a scale caption', r.mapScale.includes('fold reference'), r.mapScale.slice(0, 80));
+check('pixel map draws screen-edge markers', r.foldMarks > 0, r.foldMarks + ' markers');
+check('glossary present', r.glossTerms === 4, r.glossTerms + ' terms');
+check('depth gloss adapts to the fold reference', /\d/.test(r.glossDepth), r.glossDepth.slice(0, 80));
 
 await panel.screenshot({ path: `${OUT}/sps-panel-scan.png`, fullPage: true });
 
