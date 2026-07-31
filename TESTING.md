@@ -125,9 +125,10 @@ one. Anyone can consent. Two consequences:
 - Connecting shows a **"Google hasn't verified this app"** screen. Click
   **Advanced** → **Continue to SERP Pixel Share (unsafe)**. That is expected for
   an unverified app requesting a sensitive scope, not a fault.
-- The project carries a **100-user lifetime cap** while the sensitive scope is
-  unapproved. The console states this cap "applies over the entire lifetime of
-  the project, and it cannot be reset or changed."
+- A **100-user lifetime cap** is displayed, but it applies only to unapproved
+  sensitive or restricted scopes. With `webmasters.readonly` classified as
+  non-sensitive, it does not bind. Verify on the Data Access page before
+  relying on this.
 
 **If it says "Testing"** — add yourself: **Test users** → **+ Add users** → the
 Google account with access to your Search Console property. Without it consent
@@ -154,9 +155,23 @@ Google Auth Platform → **Data Access** → **Add or remove scopes**
 https://www.googleapis.com/auth/webmasters.readonly
 ```
 
-This page also shows how Google classifies the scope. If it is listed as
-**Sensitive**, that only matters when you publish the OAuth app to all users —
-Testing mode is unaffected.
+This page also shows how Google classifies the scope. **`webmasters.readonly`
+lists under "Your non-sensitive scopes"** — confirmed in the console on
+1 Aug 2026, against the expectation that a Search Console scope would be
+sensitive.
+
+That matters more than it sounds:
+
+- **No OAuth verification review** is required to publish the app. Verification
+  applies to unapproved sensitive and restricted scopes.
+- **The 100-user cap does not apply.** The console states the cap covers
+  "unapproved sensitive or restricted scopes" only.
+- Users are unlikely to see the "unverified app" interstitial, which is also
+  driven by sensitive and restricted scopes.
+
+Do not take this as permanent — Google reclassifies scopes. Re-check this page
+before any public release, since the privacy disclosure and the store listing
+both depend on it.
 
 ### 4. Clients — create the OAuth client
 
