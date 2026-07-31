@@ -25,6 +25,40 @@ const SPS_AIO = (() => {
     return (el.textContent || '').trim().toLowerCase();
   }
 
+  /** Does this subtree carry the "AI Overview" label Google always renders? */
+  function hasAioLabel(el) {
+    if (!el || !el.querySelectorAll) return false;
+    const nodes = el.querySelectorAll('h1, h2, h3, [role="heading"], span, div[aria-label]');
+    for (const n of nodes) {
+      const t = textOf(n);
+      if (t.length > 60) continue;
+      const aria = (n.getAttribute('aria-label') || '').toLowerCase();
+      if (LABELS.some(l => t === l || t.startsWith(l) || aria.includes(l))) return true;
+    }
+    return false;
+  }
+
+  /** Two or more result headings means we are looking at the results list. */
+  function wrapsResultsList(el) {
+    return !!el && el.querySelectorAll('a h3').length >= 2;
+  }
+
+  /**
+   * A candidate is only an AI Overview if it carries the label AND does not
+   * wrap the organic results.
+   *
+   * Both tests exist because of live captures. Without the label test the
+   * detector claimed `#gevUs` — the entire results column — on three of six
+   * real SERPs that had no AI Overview at all, reporting 88-91% page share,
+   * inventing citations out of ordinary result links, and zeroing the organic
+   * count because the column was excluded as "already classified". On one of
+   * them it then reported "cites you", which is the single most damaging thing
+   * this extension can get wrong.
+   */
+  function isAioBlock(el) {
+    return !!el && hasAioLabel(el) && !wrapsResultsList(el);
+  }
+
   /** Find the AIO container, or null. */
   function findContainer() {
     // 1. Label-driven. Most robust across Google's class churn.
@@ -38,35 +72,23 @@ const SPS_AIO = (() => {
       const hit = LABELS.some(l => t === l || t.startsWith(l) || aria.includes(l));
       if (!hit) continue;
       const block = climbToBlock(c);
-      if (block) return block;
+      if (isAioBlock(block)) return block;
     }
 
-    // 2. Attribute-driven.
+    // 2. Attribute-driven. Observed on live SERPs: the real block carries
+    //    data-lhcontainer. Generic attributes like data-mcpr are NOT usable —
+    //    they sit on ordinary containers too and were the source of the
+    //    false positives described above.
     const attr = document.querySelector(
-      '[data-attrid*="AIOverview" i], [data-subtree="aio"], [data-mcpr], div[jsname][data-hveid] [data-attrid*="overview" i]'
+      '[data-attrid*="AIOverview" i], [data-subtree="aio"], [data-lhcontainer]'
     );
     if (attr) {
-      const block = climbToBlock(attr);
-      if (block) return block;
+      const block = climbToBlock(attr) || attr;
+      if (isAioBlock(block)) return block;
     }
 
-    // 3. Structural fallback: a tall block above the first organic result
-    //    that contains outbound links but is not an ad.
-    const firstOrganic = document.querySelector('#search .g, #rso > div');
-    if (firstOrganic) {
-      const oTop = firstOrganic.getBoundingClientRect().top + window.scrollY;
-      const blocks = document.querySelectorAll('#center_col > div, #rso > div, #rcnt > div > div');
-      for (const b of blocks) {
-        if (!SPS_MEASURE.isRendered(b)) continue;
-        const m = SPS_MEASURE.docOffset(b);
-        if (m.yTop >= oTop) break;
-        if (m.height < 180) continue;
-        if (b.querySelector('[data-text-ad], [aria-label="Ads"]')) continue;
-        if (b.querySelectorAll('a[href^="http"]').length < 2) continue;
-        return b;
-      }
-    }
-
+    // No structural fallback. A block that does not say "AI Overview" is not
+    // an AI Overview, and guessing produced confidently wrong output.
     return null;
   }
 
@@ -77,6 +99,9 @@ const SPS_AIO = (() => {
       el = el.parentElement;
       if (!el) break;
       if (el.id === 'center_col' || el.id === 'rcnt' || el.id === 'rso') break;
+      // Stop before absorbing the results list — that is how a 384px overview
+      // became a 4,469px "overview" covering the whole page.
+      if (wrapsResultsList(el)) break;
       const m = el.getBoundingClientRect();
       if (m.height >= 140 && m.width >= 300) return el;
     }

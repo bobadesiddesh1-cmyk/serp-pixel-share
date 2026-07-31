@@ -106,10 +106,29 @@ const SPS_CLASSIFY = (() => {
     return uniqueBlocks(document.querySelectorAll(sel), 3);
   }
 
+  /** True when a node wraps the organic results list rather than one feature. */
+  function wrapsResultsList(el) {
+    return !!el && el.querySelectorAll('a h3').length >= 2;
+  }
+
   function localPack() {
     const sel = ['[data-async-context*="local"]', '#rso [data-record-hover]',
                  '[aria-label*="Places" i]', '#lclbjs'].join(',');
-    return uniqueBlocks(document.querySelectorAll(sel), 2);
+    const out = uniqueBlocks(document.querySelectorAll(sel), 2);
+
+    // Attribute selectors alone missed a real local pack whose block was headed
+    // "Local results" / "Locations" / "Map" — it fell through to topStories and
+    // was reported as a 2,692px news block. Google labels these sections, so
+    // read the label.
+    const heads = [...document.querySelectorAll('#center_col [role="heading"], #center_col h2')]
+      .filter(h => /^(local results|places|locations|nearby)\b/i.test((h.textContent || '').trim()));
+    for (const h of heads) {
+      const blk = h.closest('div[jsname], #rso > div, #center_col > div');
+      if (blk && !wrapsResultsList(blk) && !out.some(o => o === blk || o.contains(blk) || blk.contains(o))) {
+        out.push(blk);
+      }
+    }
+    return out;
   }
 
   function discussions() {
@@ -133,9 +152,15 @@ const SPS_CLASSIFY = (() => {
   }
 
   function topStories() {
+    // A bare /news/ match is far too loose — the word appears in result titles
+    // and section labels all over a SERP, and on a live capture it claimed a
+    // 2,692px local-results block. Anchor on the section label itself, and
+    // never accept a node that wraps the results list.
     const heads = [...document.querySelectorAll('#center_col [role="heading"], #center_col h2')]
-      .filter(h => /top stories|news/i.test(h.textContent || ''));
-    return heads.map(h => h.closest('div[jsname], #rso > div, #center_col > div')).filter(Boolean);
+      .filter(h => /^(top stories|news|latest news)\b/i.test((h.textContent || '').trim()));
+    return heads
+      .map(h => h.closest('div[jsname], #rso > div, #center_col > div'))
+      .filter(b => b && !wrapsResultsList(b));
   }
 
   function knowledgePanel() {
@@ -231,8 +256,17 @@ const SPS_CLASSIFY = (() => {
     return out;
   }
 
+  // A feature block that renders a few pixels tall is a fragment the resolver
+  // landed on, not the feature. Live captures produced People Also Ask blocks
+  // of 23px and 44px alongside the real 200px+ ones. Sitelinks are genuinely
+  // single-line, so they are exempt.
+  const MIN_FEATURE_HEIGHT = 48;
+  const THIN_OK = ['organic', 'sitelink', 'social', 'unclassified'];
+
   function push(list, node, type, extra = {}) {
     if (!node || !SPS_MEASURE.isRendered(node)) return;
+    if (!THIN_OK.includes(type) &&
+        SPS_MEASURE.docOffset(node).height < MIN_FEATURE_HEIGHT) return;
     // Several detectors can legitimately resolve to the same node (a heading's
     // closest() and a container id, for example). Counting it twice doubles its
     // pixel share and corrupts the normalised click share.

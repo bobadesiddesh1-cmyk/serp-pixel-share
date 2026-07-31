@@ -180,6 +180,57 @@ for (const vp of WIDTHS) {
   await page.close();
 }
 
+
+// ---------------------------------------------------------------------------
+// No-AI-Overview pass.
+//
+// Three of six live captures had NO AI Overview, and the detector claimed the
+// entire results column on all three — 88-91% page share, citations invented
+// from ordinary result links, organic count driven to zero, and on one query a
+// false "cites you". Absence must be detected as absence.
+// ---------------------------------------------------------------------------
+{
+  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto('file://' + path.join(ROOT, 'test/fixture-serp.html'));
+  await page.addScriptTag({ content: `window.chrome = { runtime: { sendMessage(){}, onMessage:{ addListener(){} } } };` });
+  for (const f of SRC) await page.addScriptTag({ path: path.join(ROOT, f) });
+
+  const r = await page.evaluate(async () => {
+    // Strip the AI Overview, leaving an otherwise ordinary SERP.
+    const label = [...document.querySelectorAll('[role="heading"]')]
+      .find(n => /ai overview/i.test(n.textContent || ''));
+    label?.closest('div[jsname]')?.remove();
+
+    const aio = await SPS_AIO.read(['hdfcbank.com']);
+    const els = SPS_CLASSIFY.run({ ownedDomains: ['hdfcbank.com'], aioResult: aio });
+    return {
+      present: aio.present,
+      citations: aio.citations.length,
+      cited: aio.cited,
+      organics: els.filter(e => e.type === 'organic').length,
+      aioElements: els.filter(e => e.type === 'ai_overview').length,
+      tallest: Math.max(...els.map(e => e.height)),
+      serpHeight: SPS_MEASURE.serpHeight(),
+    };
+  });
+
+  console.log(`\n${'='.repeat(78)}\nNO AI OVERVIEW ON THE PAGE\n${'='.repeat(78)}`);
+  console.log(`aioPresent ${r.present} | citations ${r.citations} | cited ${r.cited}`);
+  console.log(`organics ${r.organics} | ai_overview elements ${r.aioElements}`);
+  console.log(`tallest element ${r.tallest}px of ${r.serpHeight}px page`);
+
+  if (r.present) { console.log('FAIL: reported an AI Overview on a page without one'); failures++; }
+  if (r.cited) { console.log('FAIL: claimed "cites you" with no AI Overview present'); failures++; }
+  if (r.aioElements) { console.log('FAIL: emitted an ai_overview element'); failures++; }
+  if (r.organics < 4) { console.log(`FAIL: only ${r.organics} organics — something swallowed the results`); failures++; }
+  if (r.tallest > r.serpHeight * 0.7) { console.log('FAIL: one element covers most of the page'); failures++; }
+  if (errors.length) { console.log('CONSOLE ERRORS: ' + errors.join(' | ')); failures++; }
+  if (!r.present && !r.cited && r.organics >= 4) console.log('correctly reports no AI Overview');
+  await page.close();
+}
+
 await browser.close();
 console.log(`\n${failures ? 'FAILURES: ' + failures : 'All fixture checks passed.'}`);
 process.exit(failures ? 1 : 0);

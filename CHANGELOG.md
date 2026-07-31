@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.4.1
+
+Six live SERP captures. Three of them exposed a fault that made the extension
+confidently wrong rather than merely broken.
+
+### Fixed
+
+- **The AI Overview detector invented AI Overviews on pages that had none.**
+  On three of six real SERPs it claimed `#gevUs` — the entire results column —
+  reporting 88–91% of page height as "AI Overview", manufacturing citations out
+  of ordinary result links, and driving the organic count to **zero** because
+  the column was then excluded as already-classified. On `hdfc bank` it went
+  further and reported **"cites you"**, which is the single most damaging claim
+  this tool can get wrong. Those rows also write `aioPresent: true` into the
+  scan log, which corrupts blue-link CTR — the number the product exists for.
+
+  Cause: an over-broad attribute selector (`[data-mcpr]`, which sits on ordinary
+  containers) plus a structural fallback that guessed at "a tall block above the
+  first result". Both are gone. A candidate now has to carry the **"AI Overview"
+  label** Google always renders, and must not wrap the results list. Verified
+  against the captures: the three real overviews all carry the label and
+  `data-lhcontainer`; the three false positives carry neither.
+
+- **A 2,692px "Local results" block was classified as `top_stories`.** The
+  detector matched a bare `/news/`, which appears all over a SERP. It now
+  anchors on the section label and rejects anything wrapping the results list.
+  `localPack()` gained label-driven detection so that block is found correctly
+  instead of falling through.
+
+- **Degenerate feature fragments.** Live captures produced People Also Ask
+  blocks 23px and 44px tall beside the real 200px+ ones. Feature blocks below
+  48px are now rejected; organic results, sitelinks and social stay exempt.
+
+### Verified against live markup
+
+Real AI Overview anchor is `data-lhcontainer="1"` with the label in a heading.
+Expansion works on live SERPs. Organic ranks, domains and sitelinks are correct
+across all six captures, and `unclassified` was 0 on every one.
+
+
 ## 0.4.0
 
 ### Removed
