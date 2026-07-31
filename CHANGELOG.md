@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.3
+
+### Fixed
+
+- **"bad client id" told you nothing when the ID was valid.** Google returns
+  that same message both for an unparseable client ID and for a valid one
+  registered against a different extension — and never says which. The second
+  case is far more common, because the unpacked extension ID changes whenever
+  the folder moves or the extension is re-added. Connect now names the
+  extension ID the OAuth client must be registered against, and says a moved
+  folder is the likely cause.
+
+
 ## 0.3.2
 
 - OAuth client ID configured in `manifest.json`, so Search Console connects

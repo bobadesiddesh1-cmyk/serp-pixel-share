@@ -41,7 +41,21 @@ export async function getToken(interactive = false) {
   return new Promise((resolve, reject) => {
     chrome.identity.getAuthToken({ interactive }, token => {
       if (chrome.runtime.lastError || !token) {
-        return reject(new Error(chrome.runtime.lastError?.message || 'No token'));
+        const raw = chrome.runtime.lastError?.message || 'No token';
+        // Google answers "bad client id" both when the id is unparseable AND
+        // when it is valid but registered against a different extension. The
+        // message never says which, and the second case is far more common —
+        // the unpacked extension ID changes whenever the folder moves.
+        if (/bad client id/i.test(raw)) {
+          return reject(new Error(
+            'Google rejected this OAuth client for this extension. The client\'s ' +
+            'Item ID must equal this extension\'s ID, which is ' + chrome.runtime.id + '. ' +
+            'If the extension folder moved or was re-added, the ID changed and no longer ' +
+            'matches. Fix it at console.cloud.google.com/auth/clients, or reinstall the ' +
+            'extension at its original path.'
+          ));
+        }
+        return reject(new Error(raw));
       }
       resolve(token);
     });
