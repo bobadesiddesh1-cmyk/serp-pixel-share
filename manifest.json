@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SERP Pixel Share",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Measures where clicks actually go on a Google SERP. Pixel position, effective rank, AI Overview citation share, and blue-link CTR.",
   "minimum_chrome_version": "116",
 
@@ -57,7 +57,7 @@
   ],
 
   "oauth2": {
-    "client_id": "REPLACE_WITH_YOUR_OAUTH_CLIENT_ID.apps.googleusercontent.com",
+    "client_id": "346531613107-2s58fjhd4jn5h6uj44vcnp1o3vsff31a.apps.googleusercontent.com",
     "scopes": ["https://www.googleapis.com/auth/webmasters.readonly"]
   },
 

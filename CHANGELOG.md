@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.2
+
+- OAuth client ID configured in `manifest.json`, so Search Console connects
+  without further setup. The Setup instructions in the panel hide themselves
+  once a real client is present.
+
+Note: the client ID is not a secret. It ships inside every copy of an extension
+and is public by design; the Chrome Extension client type has no client secret
+at all. Access is bound to the extension ID registered against it.
+
+
 ## 0.3.1
 
 ### Fixed
