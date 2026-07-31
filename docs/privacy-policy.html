@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SERP Pixel Share — Privacy Policy</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font: 16px/1.65 -apple-system, "Segoe UI", system-ui, Roboto, Arial, sans-serif;
+    max-width: 46rem; margin: 0 auto; padding: 3rem 1.25rem 6rem;
+    color: #17150f; background: #fff;
+  }
+  @media (prefers-color-scheme: dark) { body { color: #f0ede5; background: #131312; } }
+  h1 { font-size: 2rem; line-height: 1.15; margin: 0 0 .5rem; }
+  h2 { font-size: 1.15rem; margin: 2.5rem 0 .6rem; }
+  .meta { color: #6b665c; font-size: .9rem; margin: 0 0 2.5rem; }
+  @media (prefers-color-scheme: dark) { .meta { color: #9a9488; } }
+  code { font-family: ui-monospace, Consolas, monospace; font-size: .875em; }
+  ul { padding-left: 1.3rem; }
+  li { margin-bottom: .45rem; }
+  .box { border-left: 3px solid #0b7a5e; padding: .1rem 0 .1rem 1rem; margin: 1.5rem 0; }
+</style>
+</head>
+<body>
+
+<h1>Privacy Policy — SERP Pixel Share</h1>
+<p class="meta">Last updated: 31 July 2026</p>
+
+<div class="box">
+  <p><strong>SERP Pixel Share has no backend.</strong> There is no server operated by the developer,
+  no analytics, no telemetry, and no crash reporting. Data about the pages you measure never leaves
+  your computer.</p>
+</div>
+
+<h2>What the extension does</h2>
+<p>
+  SERP Pixel Share measures the layout of Google search results pages you visit — where each element
+  sits vertically, how much page height it occupies, and how that affects estimated click-through
+  rate. All measurement runs inside your browser.
+</p>
+
+<h2>Data stored on your device</h2>
+<p>The following is written to Chrome's local extension storage and stays on your machine:</p>
+<ul>
+  <li>Your settings — owned domains, fold reference, overlay mode, and selected Search Console property.</li>
+  <li>A scan log of the queries you have measured, including whether an AI Overview appeared, which domains it cited, and your position.</li>
+  <li>Cached Search Console figures, if you connect that account. Cached entries expire after six hours and the cache is capped.</li>
+  <li>Calibration coefficients derived from your own data.</li>
+</ul>
+<p>
+  None of it is transmitted anywhere. Removing the extension deletes all of it. You can clear the
+  scan log at any time from the Batch tab.
+</p>
+
+<h2>Network requests</h2>
+<p>
+  If you do not connect Google Search Console, the extension makes <strong>no outbound network
+  requests at all</strong>.
+</p>
+<p>If you choose to connect Search Console, it contacts only Google's own endpoints:</p>
+<ul>
+  <li><code>accounts.google.com</code> — Google's OAuth consent flow, via Chrome's <code>identity</code> API, when you press Connect.</li>
+  <li><code>searchconsole.googleapis.com</code> — reads your Search Console performance data.</li>
+  <li><code>oauth2.googleapis.com</code> — revokes your token when you press Disconnect.</li>
+</ul>
+<p>
+  There are no other destinations. No third-party service receives any data from this extension.
+</p>
+
+<h2>Google Search Console access</h2>
+<p>
+  The extension requests a single scope,
+  <code>https://www.googleapis.com/auth/webmasters.readonly</code>. It is read-only: the extension
+  cannot modify, submit or delete anything in your Search Console properties.
+</p>
+<p>
+  Search Console data is used to display your actual click-through rate beside the extension's
+  estimate, to rebuild click-through rate excluding impressions where an AI Overview appeared, and
+  to calibrate the estimation model against your own results. It is cached locally and is not sent
+  anywhere. Pressing Disconnect revokes the token with Google and clears the local cache.
+</p>
+
+<h2>Permissions, and why each is needed</h2>
+<ul>
+  <li><strong>storage</strong> — saves your settings and the local scan log.</li>
+  <li><strong>activeTab</strong> — lets the side panel act on the results page you are viewing when you press Re-scan.</li>
+  <li><strong>scripting</strong> — runs the measurement pass in the page, because pixel positions can only be read after the page renders.</li>
+  <li><strong>sidePanel</strong> — displays the report beside the results page.</li>
+  <li><strong>tabs</strong> — drives one reusable background tab during a batch scan and locates the active results tab.</li>
+  <li><strong>identity</strong> — Google's OAuth flow, used only when you press Connect.</li>
+  <li><strong>Host access</strong> to <code>www.google.com</code>, <code>www.google.co.in</code> and <code>www.google.ae</code> — the results pages being measured. Plus the two Google API hosts listed above.</li>
+</ul>
+
+<h2>What is not collected</h2>
+<ul>
+  <li>No personally identifying information.</li>
+  <li>No browsing history outside Google results pages.</li>
+  <li>No page content from sites you visit.</li>
+  <li>No usage analytics, event tracking, or identifiers of any kind.</li>
+</ul>
+
+<h2>Children</h2>
+<p>This is a professional SEO tool and is not directed at children under 13.</p>
+
+<h2>Changes</h2>
+<p>
+  If this policy changes, the date at the top is updated and the change is noted in the extension's
+  changelog. Material changes to what leaves your machine would be announced in the release notes.
+</p>
+
+<h2>Contact</h2>
+<p>
+  Questions about this policy: <a href="mailto:bobadesiddesh1@gmail.com">bobadesiddesh1@gmail.com</a>
+</p>
+
+</body>
+</html>
