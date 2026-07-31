@@ -1,5 +1,48 @@
 # Changelog
 
+## 0.5.0
+
+Hardening pass driven by the six live captures rather than by guesswork. Every
+item below was either observed in real data or reproduced in the fixture first.
+
+### Fixed
+
+- **A single organic result could be measured as a 900px block.** The block
+  resolver climbed to the last ancestor covering exactly one `h3` — but a
+  container holding one result *plus unrelated content* still has exactly one
+  heading, so the climb happily took it and inflated that result's height and
+  pixel share ninefold. The climb now also stops when an ancestor adds height
+  the result cannot explain. Real result blocks measured 102-192px across all
+  six captures.
+
+- **A sitelink could out-earn its own parent result.** Observed live: a sitelink
+  at 5.5% under a parent at 1.1%. Two causes, both fixed. `social` was scored as
+  a flat 0.014 feature share even though it carries a rank and is given an
+  effective position, while its sitelinks used the organic curve — so the two
+  disagreed. `social` now uses the organic curve. And a sitelink's estimate is
+  clamped to its parent's, since a sub-link cannot attract more clicks than the
+  result it hangs off.
+
+- **The maintenance alarm was silent exactly when it mattered.** A missed
+  section was forgiven if it happened to contain anything classified — which is
+  how a 2,402px unidentified block sat on a live SERP with `unclassified: 0`. A
+  wrapper is now only forgiven when what we classified explains enough of its
+  height. Thresholds were measured against 19 main-column blocks from the six
+  captures, where coverage ran 20-100%: a 50% bar would have raised a false
+  alarm on a correctly-classified page, so the test is under 35% coverage *and*
+  at least 500px unexplained. Silent on all 19, fires on a section-sized hole.
+
+- **The scan log had no cap.** One entry per distinct query, kept forever,
+  against a ~10MB quota, and a failed write lost the scan silently. Capped at
+  1,000 entries, oldest evicted, with a quota-failure path that keeps the newest
+  half rather than dropping the write.
+
+### Added
+
+Regression tests for each: the over-climb guard, the sitelink/parent invariant,
+social-scores-as-organic, and an unrecognised-section alarm test.
+
+
 ## 0.4.2
 
 ### Fixed

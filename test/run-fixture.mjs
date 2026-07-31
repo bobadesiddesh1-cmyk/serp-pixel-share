@@ -172,6 +172,16 @@ for (const vp of WIDTHS) {
   // Fixture holds 4 organics plus one social (LinkedIn) — 5 result rows total.
   if (organics < 4) { console.log(`FAIL: local pack swallowed organics (${organics} left)`); failures++; }
 
+  // Invariant: a sitelink is a sub-link of the result above it and can never
+  // out-earn it. The two are scored independently, so this can invert.
+  let lastResult = null, inversions = 0;
+  for (const r of result.rows) {
+    if (r.type === 'organic' || r.type === 'social') lastResult = r;
+    else if (r.type === 'sitelink' && lastResult && r.ctr > lastResult.ctr * 1.001) inversions++;
+  }
+  console.log(`sitelink CTR inversions: ${inversions}`);
+  if (inversions) { console.log('FAIL: a sitelink out-earns its parent result'); failures++; }
+
   const annotatable = result.rows.filter(r => r.type !== 'sitelink' && r.type !== 'related_search').length;
   const annotated = result.labelCount + result.boxCount;
   console.log(`annotated ${annotated} of ${annotatable} annotatable elements`);
@@ -240,6 +250,48 @@ for (const vp of WIDTHS) {
   if (r.tallest > r.serpHeight * 0.7) { console.log('FAIL: one element covers most of the page'); failures++; }
   if (errors.length) { console.log('CONSOLE ERRORS: ' + errors.join(' | ')); failures++; }
   if (!r.present && !r.cited && r.organics >= 4) console.log('correctly reports no AI Overview');
+  await page.close();
+}
+
+
+// ---------------------------------------------------------------------------
+// The unclassified counter is the maintenance alarm. A live SERP had a 2,402px
+// section we could not identify, and because a few organic results happened to
+// sit inside it the counter stayed at 0 — silent exactly when it mattered.
+// ---------------------------------------------------------------------------
+{
+  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+  await page.goto('file://' + path.join(ROOT, 'test/fixture-serp.html'));
+  await page.addScriptTag({ content: `window.chrome = { runtime: { sendMessage(){}, onMessage:{ addListener(){} } } };` });
+  for (const f of SRC) await page.addScriptTag({ path: path.join(ROOT, f) });
+
+  const r = await page.evaluate(async () => {
+    // Wrap one organic in a tall section of a kind the classifier knows nothing
+    // about — mostly unexplained height, one classified child inside.
+    const victim = document.querySelector('div[data-hveid="o3"]');
+    const shell = document.createElement('div');
+    shell.setAttribute('data-hveid', 'mystery');
+    shell.style.minHeight = '900px';
+    victim.parentElement.insertBefore(shell, victim);
+    shell.appendChild(victim);
+    const pad = document.createElement('div');
+    pad.style.height = '760px';
+    pad.innerHTML = '<a href="https://unknown-module.example/x">something new</a>';
+    shell.appendChild(pad);
+    document.querySelector('#rso').appendChild(shell);
+
+    const aio = await SPS_AIO.read(['hdfcbank.com']);
+    const els = SPS_CLASSIFY.run({ ownedDomains: ['hdfcbank.com'], aioResult: aio });
+    return {
+      unclassified: els.filter(e => e.type === 'unclassified').length,
+      organics: els.filter(e => e.type === 'organic').length,
+    };
+  });
+
+  console.log(`\n${'='.repeat(78)}\nUNCLASSIFIED ALARM\n${'='.repeat(78)}`);
+  console.log(`unclassified ${r.unclassified} | organics still found ${r.organics}`);
+  if (!r.unclassified) { console.log('FAIL: a large unexplained section did not raise the alarm'); failures++; }
+  else console.log('alarm fires on an unrecognised section');
   await page.close();
 }
 

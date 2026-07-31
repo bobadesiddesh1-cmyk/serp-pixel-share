@@ -70,7 +70,29 @@ export async function recordScan(scan) {
     ]
   };
 
-  await chrome.storage.local.set({ [SPS.STORAGE.SCANS]: log });
+  // One entry per distinct query, kept forever, against a ~10MB quota — and a
+  // failed write here loses the scan silently. Cap it, oldest first.
+  const MAX_SCANS = 1000;
+  const keys = Object.keys(log);
+  if (keys.length > MAX_SCANS) {
+    keys.sort((a, b) => (log[a].scannedAt || 0) - (log[b].scannedAt || 0))
+        .slice(0, keys.length - MAX_SCANS)
+        .forEach(k => delete log[k]);
+  }
+
+  try {
+    await chrome.storage.local.set({ [SPS.STORAGE.SCANS]: log });
+  } catch (err) {
+    // Almost certainly QUOTA_BYTES. Drop the oldest half and keep the newest
+    // scan rather than losing it entirely.
+    const remaining = Object.keys(log)
+      .sort((a, b) => (log[b].scannedAt || 0) - (log[a].scannedAt || 0))
+      .slice(0, Math.max(1, Math.floor(MAX_SCANS / 2)));
+    const trimmed = {};
+    for (const k of remaining) trimmed[k] = log[k];
+    await chrome.storage.local.set({ [SPS.STORAGE.SCANS]: trimmed });
+    console.warn('[SPS] scan log trimmed after a storage write failure:', err?.message || err);
+  }
 }
 
 export async function getScanLog() {

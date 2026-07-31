@@ -98,7 +98,12 @@ const SPS_MODEL = (() => {
    */
   // The model is loaded after constants.js in every extension context, but it
   // must not hard-depend on that global — it has to stay testable on its own.
-  const ORGANIC_LIKE = ['organic', 'sitelink'];
+  // `social` is an ordinary ranked result that happens to sit on a social
+  // domain — it carries a rank and index.js computes an effective position for
+  // it. Scoring it as a flat feature share instead produced a live case where a
+  // sitelink came out at 5x its own parent's CTR, because the sitelink used the
+  // organic curve and the parent did not.
+  const ORGANIC_LIKE = ['organic', 'sitelink', 'social'];
 
   function estimate(el, typesAbove, viewport = 'desktop') {
     const overrides = SPS_MODEL._overrides || {};

@@ -66,5 +66,17 @@ eq('normalise sums to 1', Math.round(n.reduce((s, e) => s + e.shareOfClicks, 0) 
 eq('normalise of all-zero does not divide by zero',
    M.normalise([{ estCTR: 0 }, { estCTR: 0 }]).every(e => e.shareOfClicks === undefined || Number.isFinite(e.shareOfClicks)), true);
 
+console.log('\nSOCIAL IS A RANKED RESULT, NOT A FEATURE');
+// A social result carries a rank and gets an effective position, so it must be
+// scored on the organic curve. Scoring it as a flat feature share produced a
+// live case where its own sitelink came out at 5x its CTR.
+const args = [{ rank: 2, yTop: 2523 }, ['ai_overview', 'paa']];
+eq('social scores identically to organic',
+   M.estimate({ type: 'social', ...args[0] }, args[1]),
+   M.estimate({ type: 'organic', ...args[0] }, args[1]));
+eq('a deeper sitelink scores at or below its parent rank',
+   M.estimate({ type: 'sitelink', rank: 2, yTop: 2622 }, args[1])
+     <= M.estimate({ type: 'organic', rank: 2, yTop: 2523 }, args[1]), true);
+
 console.log(`\n${failures ? 'FAILURES: ' + failures : 'All unit checks passed.'}`);
 process.exit(failures ? 1 : 0);

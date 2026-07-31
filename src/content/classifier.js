@@ -216,8 +216,18 @@ const SPS_CLASSIFY = (() => {
     const STOP = new Set(['rso', 'search', 'center_col', 'rcnt', 'main']);
     let best = anchor.parentElement;
     let el = anchor.parentElement;
+    let bestH = best ? SPS_MEASURE.docOffset(best).height : 0;
+
     for (let i = 0; i < 12 && el && el !== document.body; i++) {
       if (el.id && STOP.has(el.id)) break;
+
+      // Stop when an ancestor adds a lot of height the result itself does not
+      // explain. Counting h3s is not enough on its own: a container holding one
+      // result plus unrelated content still has exactly one heading, and the
+      // climb happily took it — turning a 102px result into a 900px one and
+      // inflating its pixel share ninefold. Real result blocks are ~100-200px.
+      const h = SPS_MEASURE.docOffset(el).height;
+      if (bestH > 0 && h > Math.max(bestH * 1.8, bestH + 140)) break;
 
       // Covering a second h3 means we have climbed into a group of results.
       // This test must come BEFORE the direct-child shortcut below: Google
@@ -227,6 +237,7 @@ const SPS_CLASSIFY = (() => {
       // first disappears.
       if (el.querySelectorAll('h3').length > 1) break;
       best = el;
+      bestH = h;
 
       const p = el.parentElement;
       if (p && p.id && STOP.has(p.id)) break; // canonical single-result block
@@ -396,12 +407,51 @@ const SPS_CLASSIFY = (() => {
     });
 
     // Anything tall and link-bearing in the main column we did not classify.
+    //
+    // Skipping every node that merely CONTAINS something classified silenced
+    // the alarm exactly when it mattered: a live SERP had a 2,402px section we
+    // failed to identify, and because a few organic results sat inside it the
+    // unclassified count stayed at 0. The counter is the maintenance alarm — it
+    // has to fire on a section we missed, not just on an isolated orphan.
+    //
+    // So: a wrapper is only forgiven if what we DID classify accounts for most
+    // of its height. Anything with a large unexplained gap is reported.
+    // Thresholds measured against 19 main-column blocks from six live SERPs.
+    // Coverage there ran 20-100%; a 50% bar would have fired on a page that was
+    // classified correctly. 35% plus a floor on the absolute unexplained height
+    // is silent on all 19 while still catching a section-sized hole.
     const claimed = list.map(e => e.node);
+    const claimedSpans = list.map(e => [e.yTop, e.yBottom]);
+    const COVERAGE_OK = 0.35;
+    const MIN_UNEXPLAINED = 500;
+
+    function explainedFraction(g) {
+      if (g.height <= 0) return 1;
+      let covered = 0;
+      // Spans are already in document order and features do not overlap after
+      // the dedupe pass, so a simple sum is close enough for an alarm.
+      for (const [top, bottom] of claimedSpans) {
+        const lo = Math.max(top, g.yTop);
+        const hi = Math.min(bottom, g.yBottom);
+        if (hi > lo) covered += hi - lo;
+      }
+      return Math.min(1, covered / g.height);
+    }
+
     document.querySelectorAll('#rso > div, #center_col > div').forEach(n => {
       if (!SPS_MEASURE.isRendered(n)) return;
-      if (SPS_MEASURE.docOffset(n).height < 120) return;
-      if (claimed.some(c => c === n || c.contains(n) || n.contains(c))) return;
+      const g = SPS_MEASURE.docOffset(n);
+      if (g.height < 120) return;
       if (!n.querySelector('a[href^="http"]')) return;
+      if (claimed.some(c => c === n)) return;                       // classified outright
+      if (claimed.some(c => c.contains(n))) return;                 // inside something classified
+      // Contains classified children — forgiven unless a large slice of it is
+      // unexplained, which is what a whole missed section looks like.
+      if (claimed.some(c => n.contains(c))) {
+        const frac = explainedFraction(g);
+        if (frac >= COVERAGE_OK) return;
+        if (g.height * (1 - frac) < MIN_UNEXPLAINED) return;
+      }
       push(list, n, T.UNCLASSIFIED);
     });
 

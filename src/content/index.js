@@ -55,6 +55,7 @@
 
       // Estimate. typesAbove is cumulative and order-dependent, so walk in y order.
       const typesAbove = [];
+      let lastResultCTR = null;
       for (const el of elements) {
         el.xLeft = el.xLeft ?? SPS_MEASURE.docOffset(el.node).xLeft;
         el.pixelShare = SPS_MEASURE.pixelShare(el.height, serpHeight);
@@ -66,6 +67,14 @@
 
         if (el.type === SPS.TYPES.ORGANIC || el.type === SPS.TYPES.SOCIAL) {
           el.effectivePos = SPS_MODEL.effectivePosition(el.estCTR, viewport);
+          lastResultCTR = el.estCTR;
+        }
+
+        // A sitelink is a sub-link of the result above it and cannot attract
+        // more clicks than that result does. The two are scored independently,
+        // so without this the arithmetic can invert.
+        if (el.type === SPS.TYPES.SITELINK && lastResultCTR != null) {
+          el.estCTR = Math.min(el.estCTR, lastResultCTR);
         }
         // Only main-column features displace what follows them. A right-hand
         // knowledge panel overlaps the same y range without pushing anything
