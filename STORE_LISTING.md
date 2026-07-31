@@ -43,12 +43,6 @@ listing, or colour-coded accent bands by element type — plus a pixel ruler and
 summary readout. A side panel carries the full breakdown: metrics, click share
 by element, a vertical pixel map, and CSV export.
 
-**Batch mode**
-
-Paste a keyword set and scan across google.com, google.co.in and google.ae.
-Aggregate how often an AI Overview fires, how often it cites you, and what it
-costs you.
-
 **Calibration**
 
 Every coefficient in the CTR model is a default meant to be replaced. Connect
@@ -69,7 +63,7 @@ Written to be pasted into the Web Store's per-permission fields.
 
 **storage** — Saves your settings (owned domains, fold reference viewport,
 overlay mode, selected Search Console property) and the local scan log that
-powers batch aggregates, CSV export and model calibration. All of it stays in
+powers blue-link CTR, CSV export and model calibration. All of it stays in
 local extension storage on this machine.
 
 **activeTab** — Lets the side panel act on the results page you are looking at
@@ -82,9 +76,8 @@ HTML alone; it has to be measured after render.
 **sidePanel** — The report interface is a side panel, so the full breakdown can
 sit beside the results page instead of covering it.
 
-**tabs** — Batch mode drives one reusable background tab through your keyword
-list and needs to know when each page has finished loading. Also used to find
-the active results tab when you press Re-scan.
+**tabs** — Locates the active Google results tab when you press Re-scan or
+export a diagnostic, so the side panel acts on the page you are looking at.
 
 **identity** — Google's OAuth flow for connecting Search Console. Requested only
 when you press Connect, and only for the read-only scope
@@ -120,11 +113,11 @@ endpoints, and only if you choose to connect Search Console:
 If you never connect Search Console, the extension makes no outbound requests at
 all.
 
-Your keyword lists, scan history and measured SERP data are never transmitted
+Your scan history and measured SERP data are never transmitted
 anywhere. Uninstalling removes them.
 
 **Verification note — re-check before each submission.** The claim above is only
-true while the shipped code contains no other network calls. As of 0.2.0 the
+true while the shipped code contains no other network calls. As of 0.4.0 the
 audit is: three `fetch` call sites, all in `src/background/gsc.js`, targeting
 only `searchconsole.googleapis.com` and `oauth2.googleapis.com/revoke`; no
 `XMLHttpRequest`, no `sendBeacon`, no `WebSocket`, no remote script loading. Re-run

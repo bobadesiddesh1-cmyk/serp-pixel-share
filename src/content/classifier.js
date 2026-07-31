@@ -238,6 +238,25 @@ const SPS_CLASSIFY = (() => {
     // pixel share and corrupts the normalised click share.
     if (list.some(e => e.node === node)) return;
     const g = SPS_MEASURE.docOffset(node);
+
+    // Node identity is not enough. Observed on a live SERP: two People Also Ask
+    // containers covering [1347-1593] and [1383-1593] — geometrically nested,
+    // but NOT in a DOM ancestor/descendant relationship, so contains() missed
+    // it. Same-type blocks that occupy the same vertical space are one block;
+    // keep the outer and drop the subset.
+    const OVERLAP = 0.6;
+    for (let i = 0; i < list.length; i++) {
+      const e = list[i];
+      if (e.type !== type) continue;
+      const top = Math.max(e.yTop, g.yTop);
+      const bottom = Math.min(e.yBottom, g.yBottom);
+      const shared = bottom - top;
+      if (shared <= 0) continue;
+      const smaller = Math.min(e.height, g.height);
+      if (smaller <= 0 || shared / smaller < OVERLAP) continue;
+      if (g.height <= e.height) return;          // new one is the subset — drop it
+      list.splice(i, 1); i--;                    // new one is the superset — replace
+    }
     list.push({
       type,
       label: SPS.LABELS[type] || type,

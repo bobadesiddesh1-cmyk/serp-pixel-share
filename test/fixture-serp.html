@@ -100,13 +100,20 @@
       <div class="sn">Compare personal loan interest rates across 40+ banks and NBFCs. Updated daily.</div>
     </div>
 
-    <!-- People also ask -->
-    <div jsname="paaBlock" data-hveid="paa1" class="blk">
+    <!-- People also ask.
+         Mirrors a real SERP capture: an outer wrapper and an inner list that
+         both satisfy the "3+ accordion rows" test, are geometrically nested,
+         but are NOT in a DOM ancestor/descendant relationship as far as the
+         inner list's own rows are concerned. Live capture produced two PAA
+         elements at [1347-1593] and [1383-1593]. -->
+    <div jsname="paaOuter" data-hveid="paa0" class="blk">
       <div role="heading" aria-level="2">People also ask</div>
+    <div jsname="paaBlock" data-hveid="paa1">
       <div role="button" aria-expanded="false">What is the lowest personal loan interest rate?</div>
       <div role="button" aria-expanded="false">Is 11% a good personal loan rate?</div>
       <div role="button" aria-expanded="false">How is personal loan interest calculated?</div>
       <div role="button" aria-expanded="false">Can I negotiate my personal loan rate?</div>
+    </div>
     </div>
 
     <!-- organic 2 — OWNED domain, with sitelinks -->

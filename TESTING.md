@@ -47,8 +47,7 @@ while the live SERP fails.** Treat a green fixture run as "the pipeline is
 sound", never as "the selectors are right".
 
 Also unverified: AI Overview lazy-loading and source-carousel expansion (the
-fixture cannot lazy-load), GSC OAuth end to end, and batch mode against Google's
-real rate limiting.
+fixture cannot lazy-load).
 
 ---
 
@@ -251,21 +250,6 @@ the OAuth client above will not work for the published version. Sequence:
    `manifest.json` into your development copy.
 
 Keep both clients — one for the store build, one for local work.
-
-## Batch mode
-
-Current pacing per keyword: page load, then 2.2–3.6s for the AI Overview to
-stream, then 1.2–2.4s before the next. Roughly 4–7s per keyword, so ten
-keywords take about a minute.
-
-**This interval is not validated against Google's real rate limiting** — it was
-reasoned about, not measured. The runner now watches for Google's `/sorry/`
-interstitial and aborts the batch with a visible message rather than logging a
-run of empty scans that would look like "no features found".
-
-If you get rate-limited, tell me how many queries in, and raise the interval.
-
----
 
 ## Reporting a failure
 

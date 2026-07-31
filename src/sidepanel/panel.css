@@ -20,7 +20,6 @@
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
-
 @media (prefers-color-scheme: dark) {
   :root {
     --ink: #edebe4; --ink-2: #c3c1b8; --muted: #918f86;
@@ -31,9 +30,7 @@
     --clay: #d4794f;
   }
 }
-
 * { box-sizing: border-box; }
-
 body {
   margin: 0;
   font-family: var(--sans);
@@ -43,9 +40,7 @@ body {
   background: var(--paper);
   -webkit-font-smoothing: antialiased;
 }
-
 .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 11.5px; color: var(--ink-2); }
-
 /* ── header ── */
 .hd {
   display: flex; align-items: center; gap: 10px;
@@ -68,7 +63,6 @@ body {
   font-family: var(--mono); font-size: 11px;
   letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink);
 }
-
 /* ── tabs ── */
 .tabs { display: flex; border-bottom: 1px solid var(--rule); padding: 0 8px; }
 .tab {
@@ -79,10 +73,8 @@ body {
 }
 .tab:hover { color: var(--ink); }
 .tab--on { color: var(--ink); border-bottom-color: var(--ink); }
-
 main { padding: 14px; }
 .view > *:first-child { margin-top: 0; }
-
 /* ── section heads ── */
 .sec {
   margin: 22px 0 9px;
@@ -91,7 +83,6 @@ main { padding: 14px; }
   padding-bottom: 5px; border-bottom: 1px solid var(--rule);
 }
 .sec--flush { margin-top: 0; }
-
 .note { margin: 0 0 9px; font-size: 11.5px; color: var(--muted); line-height: 1.5; }
 .query {
   margin: 0 0 13px; padding: 7px 9px;
@@ -99,7 +90,6 @@ main { padding: 14px; }
   background: var(--paper-2); border-left: 2px solid var(--ink-2);
   word-break: break-word;
 }
-
 /* ── stats ── */
 .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
 .stat { background: var(--paper); padding: 9px 11px; display: flex; flex-direction: column; gap: 1px; }
@@ -107,14 +97,12 @@ main { padding: 14px; }
 .stat__v { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 21px; letter-spacing: -0.02em; }
 .stat__v--warn { color: var(--clay); }
 .stat__v--good { color: var(--teal); }
-
 .verdict {
   margin: 13px 0 0; padding: 9px 11px;
   font-size: 12px; line-height: 1.55;
   background: var(--teal-bg); border-left: 2px solid var(--teal); color: var(--ink);
 }
 .verdict--warn { background: var(--amber-bg); border-left-color: var(--amber); }
-
 /* ── bars ── */
 .bars { display: flex; flex-direction: column; gap: 6px; }
 .bar { display: grid; grid-template-columns: 96px 1fr 44px; align-items: center; gap: 8px; }
@@ -123,7 +111,6 @@ main { padding: 14px; }
 .bar__f { height: 100%; }
 .bar__v { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 11px; text-align: right; }
 .bar--own .bar__k { color: var(--teal); font-weight: 500; }
-
 /* ── pixel map: the signature element ── */
 .map { display: flex; gap: 11px; align-items: stretch; }
 .map__col { width: 46px; flex: none; display: flex; flex-direction: column; min-height: 250px; border: 1px solid var(--rule); }
@@ -133,7 +120,6 @@ main { padding: 14px; }
 .map__sw { width: 7px; height: 7px; flex: none; margin-top: 4px; }
 .map__lbl { color: var(--ink-2); }
 .map__num { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 10.5px; color: var(--muted); margin-left: auto; white-space: nowrap; }
-
 /* ── table ── */
 .tblwrap { overflow-x: auto; }
 .tbl { width: 100%; border-collapse: collapse; table-layout: fixed; }
@@ -151,7 +137,6 @@ main { padding: 14px; }
 .tbl__el { display: flex; gap: 5px; align-items: baseline; }
 .tbl__dot { width: 6px; height: 6px; flex: none; margin-top: 4px; }
 .tbl__dom { display: block; font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
-
 /* ── controls ── */
 .row { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; margin-top: 11px; }
 .btn {
@@ -167,7 +152,6 @@ main { padding: 14px; }
 .btn--go { border-color: var(--ink); }
 .btn--danger { color: var(--clay); border-color: var(--clay); }
 .btn[disabled] { opacity: 0.45; cursor: default; }
-
 textarea, select {
   width: 100%; padding: 7px 8px; margin-bottom: 8px;
   font-family: var(--mono); font-size: 11.5px; color: var(--ink);
@@ -176,7 +160,6 @@ textarea, select {
 }
 textarea:focus, select:focus { outline: none; border-color: var(--ink); }
 select { margin-bottom: 0; }
-
 /* ── cards, cites, empty, toast ── */
 .card { padding: 11px; border: 1px solid var(--rule); background: var(--paper); }
 .cites { margin-top: 9px; display: flex; flex-direction: column; gap: 4px; }
@@ -188,38 +171,27 @@ select { margin-bottom: 0; }
 .cite__n { color: var(--muted); width: 15px; flex: none; }
 .cite__d { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cite--own { color: var(--teal); font-weight: 500; }
-
 .split { display: flex; height: 22px; border: 1px solid var(--rule); margin-bottom: 7px; }
 .split__a, .split__b { display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 10px; }
 .split__a { background: var(--amber-bg); color: var(--amber); }
 .split__b { background: var(--teal-bg); color: var(--teal); }
-
 .empty { padding: 28px 12px; text-align: center; }
 .empty__h { margin: 0 0 5px; font-size: 13px; }
 .empty__b { margin: 0; font-size: 11.5px; color: var(--muted); }
-
-.prog { margin-top: 11px; }
-.prog__bar { height: 4px; background: var(--paper-2); border: 1px solid var(--rule); }
-.prog__fill { height: 100%; width: 0%; background: var(--ink); transition: width 200ms linear; }
-#batch-count { margin-top: 5px; }
-
 .disclaimer {
   margin: 26px 0 8px; padding-top: 9px;
   border-top: 1px solid var(--rule);
   font-size: 10.5px; color: var(--muted); line-height: 1.5;
 }
-
 .toast {
   position: fixed; left: 14px; right: 14px; bottom: 14px;
   padding: 8px 11px; font-size: 11.5px;
   background: var(--ink); color: var(--paper); border-radius: 2px;
 }
 .toast--err { background: var(--clay); }
-
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }
-
 /* ── hero ─────────────────────────────────────────────────────────────
    The finding, stated. Two equal tiles for rank and effective position
    left the reader to do the subtraction that IS the insight. */
@@ -230,9 +202,7 @@ select { margin-bottom: 0; }
   align-items: flex-start;
   padding: 15px 0 3px;
 }
-
 .hero__num { flex: none; }
-
 .hero__big {
   display: block;
   font-family: var(--mono);
@@ -244,7 +214,6 @@ select { margin-bottom: 0; }
 .hero__big--bad  { color: var(--clay); }
 .hero__big--warn { color: var(--amber); }
 .hero__big--ok   { color: var(--teal); }
-
 .hero__unit {
   display: block;
   margin-top: 6px;
@@ -254,14 +223,12 @@ select { margin-bottom: 0; }
   text-transform: uppercase;
   color: var(--muted);
 }
-
 .hero__say {
   margin: 1px 0 0;
   font-size: 11.5px;
   line-height: 1.5;
   color: var(--muted);
 }
-
 .sec__meta {
   font-family: var(--mono);
   font-size: 9.5px;
@@ -270,10 +237,8 @@ select { margin-bottom: 0; }
   color: var(--muted);
   margin-left: 7px;
 }
-
 /* Screen edges on the pixel map — the reference the map never had. */
 .map__col { position: relative; }
-
 .map__fold {
   position: absolute;
   left: 0;
@@ -282,7 +247,6 @@ select { margin-bottom: 0; }
   pointer-events: none;
   z-index: 2;
 }
-
 .map__fold::after {
   content: attr(data-label);
   position: absolute;
@@ -294,19 +258,16 @@ select { margin-bottom: 0; }
   color: var(--clay);
   white-space: nowrap;
 }
-
 .note--map {
   margin: 9px 0 0;
   font-size: 10.5px;
   line-height: 1.5;
 }
-
 /* ── glossary ─────────────────────────────────────────────────────────
    Always visible. A tooltip is not documentation when the terms end up
    in a client report. */
 
 .gloss { margin: 0; display: grid; gap: 11px; }
-
 .gloss dt {
   font-family: var(--mono);
   font-size: 10px;
@@ -314,14 +275,12 @@ select { margin-bottom: 0; }
   text-transform: uppercase;
   color: var(--ink);
 }
-
 .gloss dd {
   margin: 3px 0 0;
   font-size: 11px;
   line-height: 1.55;
   color: var(--muted);
 }
-
 /* ── GSC setup steps ──────────────────────────────────────────────────
    Only rendered while the manifest has no real OAuth client. */
 
@@ -331,7 +290,6 @@ select { margin-bottom: 0; }
   padding: 12px 13px;
   margin: 0 0 12px;
 }
-
 .steps {
   margin: 9px 0 9px;
   padding-left: 17px;
@@ -339,10 +297,8 @@ select { margin-bottom: 0; }
   line-height: 1.6;
   color: var(--muted);
 }
-
 .steps li { margin-bottom: 7px; }
 .steps b { color: var(--ink); font-weight: 600; }
-
 .steps code,
 .setup code {
   font-family: var(--mono);
@@ -351,7 +307,6 @@ select { margin-bottom: 0; }
   background: var(--paper-2, rgba(0, 0, 0, .04));
   padding: 1px 4px;
 }
-
 .idrow {
   display: flex;
   align-items: center;
@@ -359,7 +314,6 @@ select { margin-bottom: 0; }
   margin-top: 5px;
   flex-wrap: wrap;
 }
-
 .idrow code {
   font-size: 11px;
   word-break: break-all;

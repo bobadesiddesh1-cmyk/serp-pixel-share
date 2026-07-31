@@ -1,4 +1,4 @@
-// Service worker. Message router + batch runner.
+// Service worker. Message router.
 
 import * as GSC from './gsc.js';
 import * as Store from './store.js';
@@ -8,7 +8,6 @@ import '../shared/constants.js';
 import '../model/estimate.js';
 
 const latest = { scan: null, tabId: null, error: null };
-const batch = { running: false, queue: [], done: [], total: 0, cancel: false, tabId: null, rateLimited: false };
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
@@ -105,7 +104,7 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
           if (!s.gscProperty) return respond({ ok: false, error: 'Connect a GSC property first.' });
           const log = await Store.getScanLog();
           if (!Object.keys(log).length) {
-            return respond({ ok: false, error: 'No scans logged yet. Run a batch scan first.' });
+            return respond({ ok: false, error: 'No scans logged yet. Measure a few results pages first.' });
           }
           const result = await GSC.blueLinkCTR(s.gscProperty, log, { days: msg.days || 28 });
           return respond({ ok: true, result });
@@ -123,24 +122,6 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
           await Store.setModelOverrides(clean);
           return respond({ ok: true, ...out });
         }
-
-        case 'SPS_BATCH_START':
-          startBatch(msg.queries || [], msg.engine || 'https://www.google.com/search?q=');
-          return respond({ ok: true, total: batch.total });
-
-        case 'SPS_BATCH_CANCEL':
-          batch.cancel = true;
-          return respond({ ok: true });
-
-        case 'SPS_BATCH_STATUS':
-          return respond({
-            ok: true,
-            running: batch.running,
-            done: batch.done.length,
-            total: batch.total,
-            results: batch.done,
-            rateLimited: batch.rateLimited
-          });
 
         case 'SPS_SCAN_LOG':
           return respond({ ok: true, log: await Store.getScanLog() });
@@ -177,81 +158,3 @@ async function activeSerpTab() {
   return tabs[0] || null;
 }
 
-/**
- * Batch runner. Opens one reusable tab, walks the keyword list, waits for each
- * scan to land, records it. Paced to stay well inside normal browsing behaviour.
- */
-async function startBatch(queries, engine) {
-  if (batch.running) return;
-  batch.running = true;
-  batch.cancel = false;
-  batch.rateLimited = false;
-  batch.queue = queries.map(q => q.trim()).filter(Boolean);
-  batch.done = [];
-  batch.total = batch.queue.length;
-
-  const tab = await chrome.tabs.create({ url: 'about:blank', active: false });
-  batch.tabId = tab.id;
-
-  for (const q of batch.queue) {
-    if (batch.cancel) break;
-    try {
-      await chrome.tabs.update(tab.id, { url: engine + encodeURIComponent(q) });
-      await waitForComplete(tab.id, 15000);
-      await sleep(2200 + Math.random() * 1400); // AIO stream + human-ish pacing
-
-      // Google answers rate limiting with an interstitial at /sorry/. Pushing
-      // more requests into that only deepens the block, and every scan after it
-      // would be silently empty — which reads as "no features found" rather
-      // than "we were stopped". Abort loudly instead.
-      const current = await chrome.tabs.get(tab.id).catch(() => null);
-      if (current && /\/sorry\/|\/httpservice\/retry/.test(current.url || '')) {
-        batch.rateLimited = true;
-        batch.done.push({ query: q, ok: false, error: 'Rate limited by Google (/sorry/ interstitial). Batch stopped.' });
-        break;
-      }
-
-      const res = await chrome.tabs.sendMessage(tab.id, { type: 'SPS_REQUEST_SCAN' }).catch(() => null);
-      const s = res?.payload?.summary;
-      batch.done.push({
-        query: q,
-        ok: !!s,
-        aioPresent: s?.aioPresent ?? null,
-        aioCited: s?.aioCited ?? null,
-        ownedRank: s?.ownedRank ?? null,
-        ownedEffectivePos: s?.ownedEffectivePos ?? null,
-        ownedCTR: s?.ownedCTR ?? null,
-        unclassified: s?.unclassified ?? null
-      });
-    } catch (err) {
-      batch.done.push({ query: q, ok: false, error: String(err?.message || err) });
-    }
-    chrome.runtime.sendMessage({
-      type: 'SPS_BATCH_PROGRESS',
-      done: batch.done.length,
-      total: batch.total,
-      last: batch.done[batch.done.length - 1]
-    }).catch(() => {});
-    await sleep(1200 + Math.random() * 1200);
-  }
-
-  try { await chrome.tabs.remove(tab.id); } catch (_) {}
-  batch.running = false;
-  batch.tabId = null;
-  chrome.runtime.sendMessage({
-    type: 'SPS_BATCH_DONE',
-    results: batch.done,
-    rateLimited: !!batch.rateLimited
-  }).catch(() => {});
-}
-
-function waitForComplete(tabId, timeout) {
-  return new Promise(resolve => {
-    const done = () => { chrome.tabs.onUpdated.removeListener(fn); clearTimeout(t); resolve(); };
-    const fn = (id, info) => { if (id === tabId && info.status === 'complete') done(); };
-    chrome.tabs.onUpdated.addListener(fn);
-    const t = setTimeout(done, timeout);
-  });
-}
-
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }

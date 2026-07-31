@@ -17,7 +17,6 @@ Built because rank tracking lies. Position 2 sitting at 1,680px under an AI Over
 | Overlay boxes | Left-border accent bands, colour-coded by element type |
 | AI Overview detection | Presence flag plus citation extraction — expands the source carousel before reading domains |
 | Blue-link CTR | Rebuilds CTR excluding impressions where AIO fired. The number that ends the CTR-drop panic |
-| Batch mode | Paste a keyword set, auto-scan across google.com / .co.in / .ae, aggregate |
 | Calibration | Derives suppression coefficients from your own GSC data instead of published averages |
 | Export | Per-scan CSV and full scan-log CSV |
 
@@ -81,16 +80,16 @@ src/content/overlay.js         Inline CTR labels and overlay box rendering
 src/content/index.js           Orchestrator, scan lifecycle, messaging
 src/content/overlay.css        Injected styles, namespaced .sps-
 
-src/background/service-worker.js   Message router, batch runner, panel wiring
+src/background/service-worker.js   Message router, panel wiring
 src/background/gsc.js              OAuth, Search Console queries, blue-link join
 src/background/store.js            chrome.storage wrappers, CSV serialisers
 
-src/sidepanel/panel.{html,js,css} Report UI — metrics, bars, pixel map, batch, GSC
+src/sidepanel/panel.{html,js,css} Report UI — metrics, bars, pixel map, glossary, GSC
 ```
 
 ### Message API
 
-Service worker handles: `SPS_SCAN_RESULT` `SPS_SCAN_ERROR` `SPS_OPEN_PANEL` `SPS_GET_LATEST` `SPS_RESCAN` `SPS_GET_SETTINGS` `SPS_SET_SETTINGS` `SPS_GET_ACTUALS` `SPS_GSC_CONNECT` `SPS_GSC_DISCONNECT` `SPS_GSC_PROPERTIES` `SPS_BLUE_LINK_CTR` `SPS_CALIBRATE` `SPS_BATCH_START` `SPS_BATCH_CANCEL` `SPS_BATCH_STATUS` `SPS_SCAN_LOG` `SPS_CLEAR_LOG` `SPS_EXPORT_LOG_CSV` `SPS_EXPORT_SCAN_CSV`
+Service worker handles: `SPS_SCAN_RESULT` `SPS_SCAN_ERROR` `SPS_OPEN_PANEL` `SPS_GET_LATEST` `SPS_RESCAN` `SPS_DIAGNOSTIC` `SPS_GET_SETTINGS` `SPS_SET_SETTINGS` `SPS_GET_ACTUALS` `SPS_GSC_CONNECT` `SPS_GSC_DISCONNECT` `SPS_GSC_PROPERTIES` `SPS_BLUE_LINK_CTR` `SPS_CALIBRATE` `SPS_SCAN_LOG` `SPS_CLEAR_LOG` `SPS_EXPORT_LOG_CSV` `SPS_EXPORT_SCAN_CSV`
 
 ---
 
@@ -126,7 +125,7 @@ The extension separates the pools:
 | AIO citation rate | Share of AIO appearances citing you |
 | Suppression delta | Blue-link CTR − reported CTR |
 
-Blue-link CTR requires batch scanning a keyword set first — that builds the AIO-presence flags the GSC join needs. Scan, then join.
+Blue-link CTR reads the scan log, so it needs a handful of results pages measured first — that is what builds the AIO-presence flags the GSC join relies on. Measure, then join.
 
 Citation extraction expands the lazy-loaded source carousel before reading domains. Without that step, citations undercount badly.
 
@@ -149,7 +148,7 @@ Budget selector maintenance roughly monthly. Treat the unclassified counter as t
 ## Scope and limits
 
 - Scans the current user's own browser session only. No server-side scraping, no proxying, no SERP data leaving the machine except GSC API calls to Google.
-- Personalisation, location, and login state affect the SERP you measure. Batch runs from one machine are not a neutral sample.
+- Personalisation, location, and login state affect the SERP you measure. Readings from one machine are not a neutral sample.
 - Estimated CTR is a model. Actual CTR comes only from GSC, and only for your own properties.
 - Chrome 116+ for `chrome.sidePanel`.
 
@@ -158,6 +157,6 @@ Budget selector maintenance roughly monthly. Treat the unclassified counter as t
 ## Roadmap
 
 - Historical re-scan scheduling, SERP layout drift charts
-- Competitor pixel-share tracking across a keyword set
+- Competitor pixel-share tracking
 - Share-of-AIO-citation leaderboard by domain
 - Mobile emulation via CDP instead of viewport arithmetic

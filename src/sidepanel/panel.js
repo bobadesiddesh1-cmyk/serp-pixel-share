@@ -4,7 +4,7 @@
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 
-const state = { scan: null, settings: null, batchTimer: null };
+const state = { scan: null, settings: null };
 
 const pct = (v, d = 1) => (v == null || isNaN(v)) ? '—' : (v * 100).toFixed(d) + '%';
 const num = v => (v == null) ? '—' : Number(v).toLocaleString();
@@ -39,7 +39,7 @@ function toast(text, isErr = false) {
 $$('.tab').forEach(btn => btn.addEventListener('click', () => {
   $$('.tab').forEach(b => b.classList.toggle('tab--on', b === btn));
   $$('.view').forEach(v => { v.hidden = v.id !== 'view-' + btn.dataset.view; });
-  if (btn.dataset.view === 'batch') refreshLogSummary();
+  if (btn.dataset.view === 'setup') refreshLogSummary();
 }));
 
 // ── scan view ──
@@ -387,7 +387,7 @@ $('#run-blue').addEventListener('click', async () => {
   if (r.coverage.unscannedImpressions > 0) {
     const n = document.createElement('p'); n.className = 'note'; n.style.marginTop = '11px';
     n.textContent = num(r.coverage.unscannedImpressions) + ' impressions sit on queries you have not scanned yet. ' +
-      'Batch-scan them to bring them into the split.';
+      'Measure them on Google to bring them into the split.';
     out.appendChild(n);
   }
 });
@@ -398,76 +398,6 @@ function errBox(text) {
   p.style.color = 'var(--clay)';
   p.textContent = text || 'Something failed.';
   return p;
-}
-
-// ── batch view ──
-
-$('#batch-go').addEventListener('click', async () => {
-  const queries = $('#batch-input').value.split('\n').map(s => s.trim()).filter(Boolean);
-  if (!queries.length) return toast('Add at least one keyword.', true);
-  $('#batch-out').textContent = '';
-  $('#batch-prog').hidden = false;
-  $('#batch-go').disabled = true;
-  $('#batch-stop').hidden = false;
-  await send({ type: 'SPS_BATCH_START', queries, engine: $('#batch-engine').value });
-  pollBatch();
-});
-
-$('#batch-stop').addEventListener('click', () => send({ type: 'SPS_BATCH_CANCEL' }));
-
-function pollBatch() {
-  clearInterval(state.batchTimer);
-  state.batchTimer = setInterval(async () => {
-    const r = await send({ type: 'SPS_BATCH_STATUS' });
-    if (!r.ok) return;
-    $('#batch-fill').style.width = (r.total ? (r.done / r.total) * 100 : 0) + '%';
-    $('#batch-count').textContent = r.done + ' / ' + r.total + ' scanned';
-    if (!r.running) {
-      clearInterval(state.batchTimer);
-      $('#batch-go').disabled = false;
-      $('#batch-stop').hidden = true;
-      renderBatchResults(r.results);
-      refreshLogSummary();
-      if (r.rateLimited) {
-        toast('Google rate-limited the batch after ' + r.done + ' of ' + r.total +
-              '. Wait a few minutes and raise the pacing interval.', true);
-      } else {
-        toast('Batch complete: ' + r.done + ' queries logged.');
-      }
-    }
-  }, 900);
-}
-
-function renderBatchResults(results) {
-  const out = $('#batch-out');
-  out.textContent = '';
-  if (!results?.length) return;
-  const aio = results.filter(r => r.aioPresent).length;
-  const cited = results.filter(r => r.aioCited).length;
-
-  const sum = document.createElement('div');
-  sum.className = 'mono';
-  sum.style.marginTop = '11px';
-  sum.textContent = `${results.length} scanned \u00b7 AIO on ${aio} (${pct(aio / results.length, 0)}) \u00b7 you cited in ${cited}`;
-  out.appendChild(sum);
-
-  const wrap = document.createElement('div'); wrap.className = 'tblwrap';
-  const t = document.createElement('table'); t.className = 'tbl';
-  t.innerHTML = '<thead><tr><th>Query</th><th class="num">aio</th><th class="num">cited</th><th class="num">rank</th><th class="num">eff</th></tr></thead>';
-  const tb = document.createElement('tbody');
-  for (const r of results) {
-    const tr = document.createElement('tr');
-    if (r.aioPresent && !r.aioCited) tr.className = 'aio';
-    const c0 = document.createElement('td'); c0.textContent = r.query; c0.title = r.query;
-    const rest = [
-      r.aioPresent == null ? '—' : (r.aioPresent ? 'yes' : 'no'),
-      r.aioCited == null ? '—' : (r.aioCited ? 'yes' : 'no'),
-      r.ownedRank ?? '—',
-      r.ownedEffectivePos ?? '—'
-    ].map(v => { const td = document.createElement('td'); td.className = 'num'; td.textContent = String(v); return td; });
-    tr.append(c0, ...rest); tb.appendChild(tr);
-  }
-  t.appendChild(tb); wrap.appendChild(t); out.appendChild(wrap);
 }
 
 async function refreshLogSummary() {
@@ -603,10 +533,6 @@ $('#calibrate').addEventListener('click', async () => {
 chrome.runtime.onMessage.addListener(msg => {
   if (msg.type === 'SPS_PANEL_UPDATE') { renderScan(msg.payload); renderAIO(msg.payload); }
   if (msg.type === 'SPS_PANEL_ERROR') toast(msg.error, true);
-  if (msg.type === 'SPS_BATCH_PROGRESS') {
-    $('#batch-count').textContent = msg.done + ' / ' + msg.total + ' scanned';
-    $('#batch-fill').style.width = (msg.total ? (msg.done / msg.total) * 100 : 0) + '%';
-  }
 });
 
 (async function boot() {

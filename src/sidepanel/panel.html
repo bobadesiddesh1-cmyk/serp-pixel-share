@@ -19,7 +19,6 @@
 <nav class="tabs" role="tablist">
   <button class="tab tab--on" data-view="scan" role="tab">Scan</button>
   <button class="tab" data-view="aio" role="tab">AI Overview</button>
-  <button class="tab" data-view="batch" role="tab">Batch</button>
   <button class="tab" data-view="setup" role="tab">Setup</button>
 </nav>
 
@@ -105,37 +104,9 @@
     </div>
 
     <h2 class="sec">Impression split across logged queries</h2>
-    <p class="note">Rebuilds CTR on impressions where no AI Overview fired. Needs a batch scan plus a connected GSC property.</p>
+    <p class="note">Rebuilds CTR on impressions where no AI Overview fired. Needs several logged scans plus a connected GSC property.</p>
     <button id="run-blue" class="btn btn--go">Rebuild blue-link CTR</button>
     <div id="blue-out"></div>
-  </section>
-
-  <!-- ── Batch ────────────────────────────────────────── -->
-  <section id="view-batch" class="view" hidden>
-    <h2 class="sec sec--flush">Keyword list</h2>
-    <p class="note">One keyword per line. Each opens in a background tab, waits for the AI Overview to render, then logs the scan.</p>
-    <textarea id="batch-input" rows="7" placeholder="personal loan interest rate&#10;best credit card for fuel&#10;home loan eligibility"></textarea>
-    <div class="row">
-      <select id="batch-engine">
-        <option value="https://www.google.com/search?q=">google.com</option>
-        <option value="https://www.google.co.in/search?q=">google.co.in</option>
-        <option value="https://www.google.ae/search?q=">google.ae</option>
-      </select>
-      <button id="batch-go" class="btn btn--go">Run batch</button>
-      <button id="batch-stop" class="btn" hidden>Stop</button>
-    </div>
-    <div id="batch-prog" class="prog" hidden>
-      <div class="prog__bar"><div id="batch-fill" class="prog__fill"></div></div>
-      <div id="batch-count" class="mono"></div>
-    </div>
-    <div id="batch-out"></div>
-
-    <h2 class="sec">Scan log</h2>
-    <div id="log-summary" class="mono">—</div>
-    <div class="row">
-      <button id="exp-log" class="btn">Export log CSV</button>
-      <button id="clear-log" class="btn btn--danger">Clear log</button>
-    </div>
   </section>
 
   <!-- ── Setup ────────────────────────────────────────── -->
@@ -175,6 +146,14 @@
     <p class="note">Solves feature-suppression coefficients from your own GSC data. Needs at least 8 logged single-feature queries per feature.</p>
     <button id="calibrate" class="btn">Calibrate from GSC</button>
     <div id="cal-out" class="mono"></div>
+
+    <h2 class="sec">Scan log</h2>
+    <p class="note">Every results page you measure is logged here. Blue-link CTR and calibration both read from it.</p>
+    <div id="log-summary" class="mono">—</div>
+    <div class="row">
+      <button id="exp-log" class="btn">Export log CSV</button>
+      <button id="clear-log" class="btn btn--danger">Clear log</button>
+    </div>
 
     <h2 class="sec">Diagnostics</h2>
     <p class="note">Dumps what the classifier decided on the active results page, plus the structure of every main-column block. Send this file when a result is tagged wrongly or the unclassified count is above zero.</p>

@@ -152,7 +152,7 @@ export async function actualsFor(property, query, pageUrl) {
   bag[key] = { at: Date.now(), data };
 
   // Drop expired entries, then cap the cache. chrome.storage.local is a ~10MB
-  // quota and nothing else prunes this — a long batch run would otherwise grow
+  // quota and nothing else prunes this — heavy use would otherwise grow
   // it until writes start failing.
   const now = Date.now();
   for (const [k, v] of Object.entries(bag)) {

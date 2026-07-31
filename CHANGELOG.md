@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.4.0
+
+### Removed
+
+- **Batch mode.** The keyword runner, its tab orchestration, progress reporting,
+  cancel, rate-limit detection and the whole Batch tab are gone. The scan log it
+  fed remains, and is now written the same way it always was — by measuring
+  results pages normally. Its controls moved to Setup, where the other data
+  management lives. Blue-link CTR and calibration are unaffected; both read the
+  log, not the runner.
+
+### Fixed
+
+- **Duplicate People Also Ask block, found in a live SERP capture.** Two PAA
+  containers were classified on the same page, covering `[1347-1593]` and
+  `[1383-1593]` — geometrically nested but *not* in a DOM ancestor/descendant
+  relationship, so the existing `contains()` guard missed both directions. That
+  double-counted PAA pixel share and applied its suppression twice to every
+  organic result beneath it. `push()` now also rejects same-type blocks that
+  overlap ≥60% vertically, keeping the outer and dropping the subset.
+  Reproduced in the fixture first; verified the fixture fails without the new
+  guard (2 PAA, 15 elements) and passes with it (1 PAA, 13 elements).
+
+
 ## 0.3.3
 
 ### Added
