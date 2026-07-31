@@ -114,21 +114,37 @@ then **Enable**.
 Skipping this still lets you authenticate — every data call then fails with a
 403 that names the disabled API.
 
-### 2. Audience — add yourself as a test user
+### 2. Audience — check the publishing status
 
-Google Auth Platform → **Audience**
+Google Auth Platform → **Audience**. What you do here depends on which state the
+app is already in. The page tells you at the top under **Publishing status**.
 
-- User type: **External**
-- **Test users** → **+ Add users** → the Google account that has access to your
-  Search Console property
+**If it says "In production"** — there is no test user list, and you do not need
+one. Anyone can consent. Two consequences:
 
-Without this, consent fails with "access blocked" or "has not completed the
-Google verification process".
+- Connecting shows a **"Google hasn't verified this app"** screen. Click
+  **Advanced** → **Continue to SERP Pixel Share (unsafe)**. That is expected for
+  an unverified app requesting a sensitive scope, not a fault.
+- The project carries a **100-user lifetime cap** while the sensitive scope is
+  unapproved. The console states this cap "applies over the entire lifetime of
+  the project, and it cannot be reset or changed."
 
-Note: while the app is in Testing, refresh tokens expire after **7 days**. You
-will periodically press Connect again. That is normal, and not a reason to
-publish the OAuth app — publishing triggers a verification review you do not
-need for personal use.
+**If it says "Testing"** — add yourself: **Test users** → **+ Add users** → the
+Google account with access to your Search Console property. Without it consent
+fails with "access blocked". Note that in Testing, refresh tokens expire after
+**7 days**, so you will re-press Connect regularly.
+
+For one person measuring their own properties, **In production is the better
+state** — no 7-day expiry, and the unverified warning is a single extra click.
+
+**Do not submit for verification yet.** It is only needed to remove the warning
+screen and lift the user cap, which matters when strangers use the extension,
+not while you do. Verification wants a hosted privacy policy, a demo video, a
+scope justification and domain ownership proof.
+
+**The 100-user cap is permanent per Cloud project.** If you intend to publish
+publicly on this project later, every consent spent now is spent for good. Use a
+separate throwaway project for experiments if that is a concern.
 
 ### 3. Data Access — add the scope
 
