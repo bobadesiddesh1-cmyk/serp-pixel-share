@@ -13,7 +13,31 @@
 const API = 'https://searchconsole.googleapis.com/webmasters/v3';
 const CACHE_TTL = 6 * 60 * 60 * 1000; // 6h
 
+const PLACEHOLDER_CLIENT_ID = 'REPLACE_WITH_YOUR_OAUTH_CLIENT_ID';
+
+/**
+ * True when the manifest still ships the placeholder OAuth client.
+ * Chrome answers an unparseable client id with "bad client id: {0}" — an
+ * unfilled error template that tells the user nothing about what to do.
+ */
+export function clientIdConfigured() {
+  const id = chrome.runtime.getManifest()?.oauth2?.client_id || '';
+  return !!id && !id.startsWith(PLACEHOLDER_CLIENT_ID) && id.endsWith('.apps.googleusercontent.com');
+}
+
+export function extensionId() {
+  return chrome.runtime.id;
+}
+
 export async function getToken(interactive = false) {
+  if (!clientIdConfigured()) {
+    throw new Error(
+      'Search Console is not set up yet. Create an OAuth client ID of type ' +
+      'Chrome Extension with Application ID ' + chrome.runtime.id +
+      ', paste it into manifest.json under oauth2.client_id, then reload the extension. ' +
+      'Full steps are in TESTING.md.'
+    );
+  }
   return new Promise((resolve, reject) => {
     chrome.identity.getAuthToken({ interactive }, token => {
       if (chrome.runtime.lastError || !token) {

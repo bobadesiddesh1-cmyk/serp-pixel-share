@@ -78,6 +78,13 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
           return respond({ ok: true, data });
         }
 
+        case 'SPS_GSC_SETUP_INFO':
+          return respond({
+            ok: true,
+            extensionId: GSC.extensionId(),
+            configured: GSC.clientIdConfigured()
+          });
+
         case 'SPS_GSC_CONNECT': {
           await GSC.getToken(true);
           const props = await GSC.listProperties();

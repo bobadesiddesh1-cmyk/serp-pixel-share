@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.3.1
+
+### Fixed
+
+- **"bad client id: {0}" on Connect.** With the placeholder still in
+  `manifest.json`, Chrome answers an unparseable OAuth client with an unfilled
+  error template — it names neither the cause nor the fix. The extension now
+  detects the placeholder before calling `chrome.identity`, disables Connect,
+  and says what is actually missing.
+
+### Added
+
+- **Setup steps in the panel**, shown only while no real client ID is
+  configured, with the **extension ID displayed and copyable**. That ID is the
+  Application ID the OAuth client needs, and `chrome://extensions` was the only
+  place to read it.
+
+
 ## 0.3.0
 
 Overlay and side panel redesigned. The old label put four values at four

@@ -321,3 +321,47 @@ select { margin-bottom: 0; }
   line-height: 1.55;
   color: var(--muted);
 }
+
+/* ── GSC setup steps ──────────────────────────────────────────────────
+   Only rendered while the manifest has no real OAuth client. */
+
+.setup {
+  border: 1px solid var(--rule);
+  border-left: 2px solid var(--amber);
+  padding: 12px 13px;
+  margin: 0 0 12px;
+}
+
+.steps {
+  margin: 9px 0 9px;
+  padding-left: 17px;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.steps li { margin-bottom: 7px; }
+.steps b { color: var(--ink); font-weight: 600; }
+
+.steps code,
+.setup code {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--ink);
+  background: var(--paper-2, rgba(0, 0, 0, .04));
+  padding: 1px 4px;
+}
+
+.idrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+  flex-wrap: wrap;
+}
+
+.idrow code {
+  font-size: 11px;
+  word-break: break-all;
+  user-select: all;
+}

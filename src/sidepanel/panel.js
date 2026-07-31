@@ -630,7 +630,35 @@ chrome.runtime.onMessage.addListener(msg => {
     }
   }
 
+  // Show the setup steps only while there is nothing to connect with, and put
+  // the extension ID in reach — it is the one value the OAuth client needs and
+  // the only place to read it is chrome://extensions.
+  const info = await send({ type: 'SPS_GSC_SETUP_INFO' });
+  if (info.ok) {
+    $('#ext-id').textContent = info.extensionId || '—';
+    $('#gsc-setup').hidden = !!info.configured;
+    if (!info.configured) {
+      $('#gsc-state').textContent = 'Not set up — no OAuth client ID in the manifest yet.';
+      $('#gsc-connect').disabled = true;
+    }
+  }
+
   const latest = await send({ type: 'SPS_GET_LATEST' });
   if (latest.ok && latest.payload) { renderScan(latest.payload); renderAIO(latest.payload); }
   refreshLogSummary();
 })();
+
+$('#copy-id').addEventListener('click', async () => {
+  const id = $('#ext-id').textContent.trim();
+  try {
+    await navigator.clipboard.writeText(id);
+    toast('Extension ID copied.');
+  } catch {
+    // Clipboard can be refused; selecting the text is still useful.
+    const r = document.createRange();
+    r.selectNodeContents($('#ext-id'));
+    const sel = getSelection();
+    sel.removeAllRanges(); sel.addRange(r);
+    toast('Press Ctrl+C to copy the selected ID.');
+  }
+});

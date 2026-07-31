@@ -149,6 +149,21 @@
     <select id="viewport"></select>
 
     <h2 class="sec">Search Console</h2>
+    <!-- Shown only while the manifest still carries the placeholder client ID.
+         Chrome's own answer in that state is "bad client id: {0}", which names
+         no cause and no fix. -->
+    <div id="gsc-setup" class="setup" hidden>
+      <p class="note">Optional — adds your actual CTR beside the estimate, blue-link CTR, and calibration.</p>
+      <ol class="steps">
+        <li>Google Cloud Console → enable the <b>Google Search Console API</b>.</li>
+        <li>Credentials → Create credentials → OAuth client ID → application type <b>Chrome Extension</b>.</li>
+        <li>Application ID — paste this exact value:
+          <span class="idrow"><code id="ext-id">…</code><button id="copy-id" class="btn btn--sm">Copy</button></span>
+        </li>
+        <li>Put the client ID into <code>manifest.json</code> under <code>oauth2.client_id</code>, then reload the extension.</li>
+      </ol>
+      <p class="note">Scope stays <code>webmasters.readonly</code>. Full steps in TESTING.md.</p>
+    </div>
     <div id="gsc-state" class="mono">Not connected</div>
     <div class="row">
       <button id="gsc-connect" class="btn btn--go">Connect</button>
