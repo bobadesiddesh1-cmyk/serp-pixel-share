@@ -86,43 +86,77 @@ What to look at yourself, per query:
   the carousel by hand.
 
 ---
-
-## GSC OAuth setup
+## Google Search Console setup
 
 The extension works fully without this. GSC adds actual CTR beside the estimate,
-blue-link CTR, and calibration.
+blue-link CTR, and model calibration.
 
-You need your **extension ID** first: `chrome://extensions` → find SERP Pixel
-Share → copy the ID (32 lowercase letters).
+Google moved these screens into the **Google Auth Platform** console. The paths
+below match that UI. Do the steps in this order — the API enable and the test
+user are both easy to skip and both fail later rather than immediately.
 
-> **The ID is derived from the folder path.** Loading the same code from a
-> different directory produces a different ID and the OAuth client stops
-> matching — I hit this moving from the source folder to an unpacked copy of the
-> release zip, and the ID changed. Either keep the extension in one fixed
-> folder, or pin the ID by adding a `key` to `manifest.json`:
->
-> 1. Load unpacked once and pack it: `chrome://extensions` → **Pack extension**.
->    This produces a `.pem` private key alongside a `.crx`.
-> 2. Get the public key: `openssl rsa -in key.pem -pubout -outform DER | base64 -w 0`
-> 3. Add it as `"key": "<that base64 string>"` at the top level of
->    `manifest.json`.
->
-> The ID is then stable across folders and machines. Keep the `.pem` private and
-> out of version control. Remove the `key` field before Web Store submission —
-> the store assigns its own identity.
+### Before you start
 
-1. Go to <https://console.cloud.google.com> → create a project (or pick one).
-2. **APIs & Services → Library** → search **Google Search Console API** →
-   **Enable**.
-3. **APIs & Services → OAuth consent screen** → External → fill the app name and
-   your email → add yourself under **Test users**. Do not submit for
-   verification; you do not need it for personal use.
-4. **APIs & Services → Credentials → Create credentials → OAuth client ID**.
-5. Application type: **Chrome App** (listed as *Chrome Extension* in newer
-   console UI).
-6. **Application ID**: paste your extension ID from above.
-7. Copy the generated client ID. It ends in `.apps.googleusercontent.com`.
-8. Open `manifest.json` and replace the placeholder:
+**Put the extension folder in its permanent home.** The unpacked extension ID is
+derived from the folder path, and the OAuth client is bound to that ID. Moving
+the folder afterwards breaks the connection and you redo step 4.
+
+Get your ID from the extension: side panel → **Setup** → the Search Console block
+shows it with a **Copy** button.
+
+### 1. Enable the API
+
+<https://console.cloud.google.com/apis/library/searchconsole.googleapis.com>
+
+Confirm the project selector at the top shows the project you intend to use,
+then **Enable**.
+
+Skipping this still lets you authenticate — every data call then fails with a
+403 that names the disabled API.
+
+### 2. Audience — add yourself as a test user
+
+Google Auth Platform → **Audience**
+
+- User type: **External**
+- **Test users** → **+ Add users** → the Google account that has access to your
+  Search Console property
+
+Without this, consent fails with "access blocked" or "has not completed the
+Google verification process".
+
+Note: while the app is in Testing, refresh tokens expire after **7 days**. You
+will periodically press Connect again. That is normal, and not a reason to
+publish the OAuth app — publishing triggers a verification review you do not
+need for personal use.
+
+### 3. Data Access — add the scope
+
+Google Auth Platform → **Data Access** → **Add or remove scopes**
+
+```
+https://www.googleapis.com/auth/webmasters.readonly
+```
+
+This page also shows how Google classifies the scope. If it is listed as
+**Sensitive**, that only matters when you publish the OAuth app to all users —
+Testing mode is unaffected.
+
+### 4. Clients — create the OAuth client
+
+Google Auth Platform → **Clients** → **+ Create client**
+
+- **Application type**: `Chrome Extension`
+- **Item ID**: the 32-character extension ID from the panel
+
+This UI labels the field **Item ID**; older docs call it Application ID. Same
+value.
+
+Copy the generated client ID. It ends in `.apps.googleusercontent.com`.
+
+### 5. Paste it into the manifest
+
+`manifest.json`:
 
 ```json
 "oauth2": {
@@ -131,18 +165,44 @@ Share → copy the ID (32 lowercase letters).
 }
 ```
 
-9. `chrome://extensions` → **Reload** on the extension.
-10. Side panel → **Setup → Connect**. Pick your property from the dropdown.
+### 6. Reload and connect
 
-Scope stays `webmasters.readonly` — read-only, no write access to your
-properties. If you change the scope, the token cache must be cleared with
-Disconnect first.
+`chrome://extensions` → **Reload** on the extension → side panel → **Setup** →
+**Connect** → choose your property from the dropdown.
 
-**If Connect fails:** the two usual causes are an Application ID that does not
-match the current extension ID, and not having added yourself as a test user on
-the consent screen.
+The setup steps disappear from the panel once a real client ID is present. If
+they are still showing, the manifest edit did not take or the extension was not
+reloaded.
 
----
+### Verifying it worked
+
+- The chip on your own listing gains an `actual` value beside `est.`
+- AI Overview tab → **Rebuild blue-link CTR** returns totals
+- Setup → **Calibrate from GSC** reports a sample size
+
+### When Connect fails
+
+| Message | Cause |
+|---|---|
+| `bad client id: {0}` | The manifest still holds the placeholder. Chrome could not parse it. |
+| `Invalid OAuth2 Client ID` / ID mismatch | The Item ID does not match the current extension ID. The folder moved, or the extension was removed and re-added. |
+| `access_denied`, "app is blocked" | You are not on the Audience test user list. |
+| 403 naming the API | Step 1 was skipped for this project. |
+| Worked yesterday, fails today | Testing-mode refresh token expired after 7 days. Press Connect again. |
+
+### Publishing to the Chrome Web Store
+
+The Web Store assigns a **different** extension ID from your unpacked copy, so
+the OAuth client above will not work for the published version. Sequence:
+
+1. Upload the zip as a **draft** — the dashboard then shows the permanent ID.
+2. Create a second OAuth client (Chrome Extension) using that store ID.
+3. Put that client ID in `manifest.json`, rebuild, upload again.
+4. To keep local development on the same ID, install the published extension,
+   open its folder in your Chrome profile, and copy the `key` field from its
+   `manifest.json` into your development copy.
+
+Keep both clients — one for the store build, one for local work.
 
 ## Batch mode
 
