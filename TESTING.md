@@ -97,12 +97,29 @@ user are both easy to skip and both fail later rather than immediately.
 
 ### Before you start
 
-**Put the extension folder in its permanent home.** The unpacked extension ID is
-derived from the folder path, and the OAuth client is bound to that ID. Moving
-the folder afterwards breaks the connection and you redo step 4.
+**The extension ID is pinned and no longer depends on the folder.** `manifest.json`
+carries a `key` field, so Chrome derives the same ID wherever the extension is
+installed:
 
-Get your ID from the extension: side panel → **Setup** → the Search Console block
-shows it with a **Copy** button.
+```
+nmkandfnjmliclpbbjggcndfcmjbnomh
+```
+
+Verified by loading the same build from two unrelated paths and confirming both
+resolved to that ID. Register it once as the OAuth client's **Item ID** and
+reinstalling, moving or re-extracting the folder will never break the connection
+again.
+
+Without the `key`, the ID is derived from the install path — which is why moving
+the folder used to invalidate the OAuth pairing and produce a `bad client id`
+error naming a client ID that was itself perfectly valid.
+
+**Remove the `key` field before Chrome Web Store submission.** The store assigns
+its own identity, and a published build needs its own OAuth client registered
+against the store-assigned ID.
+
+The panel still shows the live ID with a **Copy** button under Setup → Search
+Console.
 
 ### 1. Enable the API
 

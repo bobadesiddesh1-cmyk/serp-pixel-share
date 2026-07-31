@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0DFaTO2M0EwyK1ik3p4GTqnQC2+GaE6ih18c0n+s+WV4/xh6rFxlXPE47L4XIjtFvaXmm981kMqTqYcQ11TkRr3HOFUht2uXSXMQyuJFnlQpv5aBqdKqOkjmfSVXEKVHGaPcWV0mvgOp12XM0xA1VAlfUwQd8I4TqhXx1PdyEl+XjC7wAXB1B1xyeHESntT3aOTgS4fRNcfLOHkaVmf7dcYG7xd99INyaGX3sY8NDop3dgN6ecL3GL4tt0fi0TjIqHA15pg+c4mVHp/TzgWtFrEZNvgyb8WWJL3XeLCKB3K1pwPKhXJ3qOlLjTauK3cZ6vzU3UWsSXIHXWKPT4xiJwIDAQAB",
   "name": "SERP Pixel Share",
   "version": "0.3.3",
   "description": "Measures where clicks actually go on a Google SERP. Pixel position, effective rank, AI Overview citation share, and blue-link CTR.",
   "minimum_chrome_version": "116",
-
   "permissions": [
     "storage",
     "activeTab",
@@ -13,7 +13,6 @@
     "tabs",
     "identity"
   ],
-
   "host_permissions": [
     "https://www.google.com/*",
     "https://www.google.co.in/*",
@@ -21,20 +20,16 @@
     "https://searchconsole.googleapis.com/*",
     "https://oauth2.googleapis.com/*"
   ],
-
   "background": {
     "service_worker": "src/background/service-worker.js",
     "type": "module"
   },
-
   "side_panel": {
     "default_path": "src/sidepanel/panel.html"
   },
-
   "action": {
     "default_title": "SERP Pixel Share"
   },
-
   "content_scripts": [
     {
       "matches": [
@@ -51,16 +46,18 @@
         "src/content/overlay.js",
         "src/content/index.js"
       ],
-      "css": ["src/content/overlay.css"],
+      "css": [
+        "src/content/overlay.css"
+      ],
       "run_at": "document_idle"
     }
   ],
-
   "oauth2": {
     "client_id": "346531613107-2s58fjhd4jn5h6uj44vcnp1o3vsff31a.apps.googleusercontent.com",
-    "scopes": ["https://www.googleapis.com/auth/webmasters.readonly"]
+    "scopes": [
+      "https://www.googleapis.com/auth/webmasters.readonly"
+    ]
   },
-
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",

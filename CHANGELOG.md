@@ -2,6 +2,15 @@
 
 ## 0.3.3
 
+### Added
+
+- **The extension ID is pinned via a `key` field in the manifest**, so it no
+  longer depends on the install path. Verified by loading the same build from
+  two unrelated directories and confirming both resolved to
+  `nmkandfnjmliclpbbjggcndfcmjbnomh`. This removes the failure mode where
+  moving or re-extracting the folder silently invalidated the OAuth client.
+  The field must be removed before Web Store submission.
+
 ### Fixed
 
 - **"bad client id" told you nothing when the ID was valid.** Google returns
