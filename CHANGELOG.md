@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.4.2
+
+### Fixed
+
+- **Local packs were not detected at all.** Two live captures showed two
+  different shapes and neither was found: a self-contained "Places" block whose
+  heading sat at a level the selector did not cover, and a "Local results"
+  heading whose nearest structural ancestor was a 2,402px block that *also*
+  contained organic results 3-6. Accepting that ancestor would double-count the
+  results; rejecting it lost the pack entirely.
+
+  Sections are now resolved from their heading **outward** to the tightest
+  ancestor tall enough to be the section but which does not wrap the results
+  list — the module sits between the two. The heading search covers `h1`-`h3`
+  as well as `role="heading"`.
+
+  The fixture carries the harder shape, and the guard is verified to be what
+  catches it: with the old `closest()` resolver the fixture finds 0 local packs;
+  with the fix it finds exactly 1, at 210px rather than the 1,200px wrapper,
+  and every organic result survives.
+
+
 ## 0.4.1
 
 Six live SERP captures. Three of them exposed a fault that made the extension

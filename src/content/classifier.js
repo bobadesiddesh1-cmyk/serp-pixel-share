@@ -111,22 +111,47 @@ const SPS_CLASSIFY = (() => {
     return !!el && el.querySelectorAll('a h3').length >= 2;
   }
 
+  /**
+   * Resolve a section from its heading OUTWARD to the tightest ancestor that is
+   * big enough to be the section but does not swallow the results list.
+   *
+   * closest() cannot do this. On a live SERP the "Local results" heading's
+   * nearest structural ancestor was a 2,402px `#rso > div` that also contained
+   * organic results 3-6 — accepting it would double-count them, and rejecting
+   * it outright loses the local pack entirely. The section itself sits between
+   * the two.
+   */
+  function blockFromLabel(heading, minHeight = 80) {
+    let el = heading.parentElement;
+    for (let i = 0; i < 8 && el; i++) {
+      if (['rso', 'search', 'center_col', 'rcnt'].includes(el.id)) break;
+      if (wrapsResultsList(el)) break;
+      if (SPS_MEASURE.docOffset(el).height >= minHeight) return el;
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  const LOCAL_LABEL = /^(local results|places|locations|nearby|businesses)\b/i;
+
   function localPack() {
     const sel = ['[data-async-context*="local"]', '#rso [data-record-hover]',
                  '[aria-label*="Places" i]', '#lclbjs'].join(',');
     const out = uniqueBlocks(document.querySelectorAll(sel), 2);
 
-    // Attribute selectors alone missed a real local pack whose block was headed
-    // "Local results" / "Locations" / "Map" — it fell through to topStories and
-    // was reported as a 2,692px news block. Google labels these sections, so
-    // read the label.
-    const heads = [...document.querySelectorAll('#center_col [role="heading"], #center_col h2')]
-      .filter(h => /^(local results|places|locations|nearby)\b/i.test((h.textContent || '').trim()));
+    // Attribute selectors matched neither of two real local packs. Google labels
+    // the section, so read the label — across h1..h3 as well as role=heading,
+    // because the observed markup used a level the narrower selector missed.
+    const heads = [...document.querySelectorAll(
+      '#center_col h1, #center_col h2, #center_col h3, #center_col [role="heading"]'
+    )].filter(h => LOCAL_LABEL.test((h.textContent || '').trim()));
+
     for (const h of heads) {
-      const blk = h.closest('div[jsname], #rso > div, #center_col > div');
-      if (blk && !wrapsResultsList(blk) && !out.some(o => o === blk || o.contains(blk) || blk.contains(o))) {
-        out.push(blk);
-      }
+      const blk = blockFromLabel(h);
+      if (!blk) continue;
+      if (!blk.querySelector('a[href^="http"]')) continue;   // a pack links somewhere
+      if (out.some(o => o === blk || o.contains(blk) || blk.contains(o))) continue;
+      out.push(blk);
     }
     return out;
   }

@@ -2,7 +2,7 @@
 // Attached to globalThis so content scripts (non-module) and the panel both read it.
 
 const SPS = {
-  VERSION: '0.4.1',
+  VERSION: '0.4.2',
 
   // Element taxonomy. Order = rough top-of-page precedence, not guaranteed.
   TYPES: {

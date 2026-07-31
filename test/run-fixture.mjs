@@ -160,6 +160,18 @@ for (const vp of WIDTHS) {
   if (addedH > 0) { console.log('FAIL: overlay lengthened the page'); failures++; }
   // Every annotatable element must carry SOMETHING. A dropped annotation reads
   // as an undetected element, which is a worse lie than a mixed overlay.
+  // Local pack must resolve to the module, not the wrapper that also holds the
+  // organic results. Live capture had the heading inside a 2,402px block.
+  const packs = result.rows.filter(r => r.type === 'local_pack');
+  const organics = result.rows.filter(r => r.type === 'organic').length;
+  console.log(`local packs ${packs.length}` + (packs.length ? ` (h=${packs[0].h})` : '') + ` | organics ${organics}`);
+  if (packs.length !== 1) { console.log(`FAIL: expected 1 local pack, got ${packs.length}`); failures++; }
+  else if (packs[0].h > s.serpHeight * 0.4) {
+    console.log(`FAIL: local pack ${packs[0].h}px is the wrapper, not the module`); failures++;
+  }
+  // Fixture holds 4 organics plus one social (LinkedIn) — 5 result rows total.
+  if (organics < 4) { console.log(`FAIL: local pack swallowed organics (${organics} left)`); failures++; }
+
   const annotatable = result.rows.filter(r => r.type !== 'sitelink' && r.type !== 'related_search').length;
   const annotated = result.labelCount + result.boxCount;
   console.log(`annotated ${annotated} of ${annotatable} annotatable elements`);
