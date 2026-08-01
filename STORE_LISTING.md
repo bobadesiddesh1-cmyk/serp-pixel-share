@@ -117,11 +117,13 @@ Your scan history and measured SERP data are never transmitted
 anywhere. Uninstalling removes them.
 
 **Verification note — re-check before each submission.** The claim above is only
-true while the shipped code contains no other network calls. As of 0.4.0 the
-audit is: three `fetch` call sites, all in `src/background/gsc.js`, targeting
-only `searchconsole.googleapis.com` and `oauth2.googleapis.com/revoke`; no
-`XMLHttpRequest`, no `sendBeacon`, no `WebSocket`, no remote script loading. Re-run
-before publishing:
+true while the shipped code contains no other network calls. Re-run as of 0.5.0,
+the archive being submitted: three `fetch` call sites, all in
+`src/background/gsc.js`, targeting only `searchconsole.googleapis.com` and
+`oauth2.googleapis.com/revoke`; no `XMLHttpRequest`, no `sendBeacon`, no
+`WebSocket`, no remote script loading. The only other host string in the source
+is `www.googleapis.com`, which appears once as the OAuth scope identifier in
+`manifest.json` and is never fetched. Re-run before publishing:
 
 ```bash
 grep -rnE "fetch\(|XMLHttpRequest|sendBeacon|new WebSocket|importScripts" src/
