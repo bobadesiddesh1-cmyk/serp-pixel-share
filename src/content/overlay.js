@@ -380,7 +380,10 @@ const SPS_OVERLAY = (() => {
     brand.href = SPS.BRAND.url;
     brand.target = '_blank';
     brand.rel = 'noopener noreferrer';
-    brand.textContent = 'built by ' + SPS.BRAND.host;
+    brand.appendChild(SPS.brandMark(12));
+    const bt = document.createElement('span');
+    bt.textContent = 'built by ' + SPS.BRAND.host;
+    brand.appendChild(bt);
     h.appendChild(brand);
 
     document.body.appendChild(h);

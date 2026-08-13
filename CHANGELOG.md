@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.5.2
+
+### Changed
+
+- **The maker credit now uses the real BuildWithSiddesh mark** — the lime
+  `{ B }` from buildwithsiddesh.com — instead of the `BWS` text placeholder
+  0.5.1 shipped with. It appears at 22px in the panel footer and 12px in the
+  on-page HUD.
+
+  The mark is built with `createElementNS` in `SPS.brandMark` rather than
+  loaded as an `<img>`. The HUD draws into google.com, and an `<img>` pointing
+  at an extension file would have meant declaring the icon a web-accessible
+  resource — exposing it to every page the user visits, to save nothing. One
+  definition now feeds both surfaces, and the panel and HUD cannot drift apart.
+
+  `icons/bws-mark.svg` is the source of the geometry and ships alongside it.
+
+  This adds `www.w3.org` to the privacy audit's host grep — the SVG namespace
+  URI, which is an identifier and not an address. `STORE_LISTING.md` names it
+  so the next person running the audit does not have to work that out.
+
+- Store screenshots and both promo tiles regenerated, all carrying the mark.
+
 ## 0.5.1
 
 ### Added

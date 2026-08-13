@@ -2,7 +2,7 @@
 // Attached to globalThis so content scripts (non-module) and the panel both read it.
 
 const SPS = {
-  VERSION: '0.5.1',
+  VERSION: '0.5.2',
 
   // Maker credit. Rendered in the panel footer and the on-page HUD, and it is
   // a plain link — nothing is fetched from this host, no parameters are
@@ -106,6 +106,61 @@ const SPS = {
     gscProperty: '',
     showEstimates: true
   }
+};
+
+/**
+ * The BuildWithSiddesh mark, built as DOM rather than markup.
+ *
+ * The content script draws this into google.com, so it cannot be an <img>
+ * pointing at an extension file without declaring the icon a web-accessible
+ * resource — which would expose it to every page. Building the nodes avoids
+ * that, and avoids innerHTML, and lets the panel and the HUD share one source.
+ *
+ * Geometry matches icons/bws-mark.svg exactly.
+ *
+ * @param {number} size rendered edge length in px
+ */
+SPS.brandMark = function (size) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 32 32');
+  svg.setAttribute('width', size);
+  svg.setAttribute('height', size);
+  svg.setAttribute('aria-hidden', 'true');
+  svg.style.display = 'block';
+  svg.style.flex = 'none';
+
+  const bg = document.createElementNS(NS, 'rect');
+  bg.setAttribute('width', '32');
+  bg.setAttribute('height', '32');
+  bg.setAttribute('rx', '8');
+  bg.setAttribute('fill', '#c8f135');
+  svg.appendChild(bg);
+
+  const strokes = [
+    'M7.4 7.6 C5.9 8.2 5.2 9.4 5.4 11 C5.6 12.4 5.2 13.4 4.2 14 C5.4 14.7 5.9 15.8 5.7 17.3 C5.5 18.9 6.1 20.2 7.6 20.9',
+    'M24.6 7.6 C26.1 8.2 26.8 9.4 26.6 11 C26.4 12.4 26.8 13.4 27.8 14 C26.6 14.7 26.1 15.8 26.3 17.3 C26.5 18.9 25.9 20.2 24.4 20.9'
+  ];
+  for (const d of strokes) {
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', d);
+    p.setAttribute('stroke', '#0a0a0c');
+    p.setAttribute('stroke-width', '1.8');
+    p.setAttribute('stroke-linecap', 'round');
+    p.setAttribute('stroke-linejoin', 'round');
+    p.setAttribute('fill', 'none');
+    svg.appendChild(p);
+  }
+
+  const b = document.createElementNS(NS, 'path');
+  b.setAttribute('d', 'M12 7.8 H17 C19.2 7.8 20.7 9 20.7 11 C20.7 12.4 19.9 13.4 18.6 13.9 ' +
+    'C20.2 14.3 21.1 15.5 21.1 17.1 C21.1 19.2 19.5 20.4 17.2 20.4 H12 Z ' +
+    'M14.7 10.1 V12.9 H16.7 C17.7 12.9 18.3 12.4 18.3 11.5 C18.3 10.6 17.7 10.1 16.7 10.1 Z ' +
+    'M14.7 15 V18.1 H17 C18 18.1 18.6 17.5 18.6 16.5 C18.6 15.6 18 15 17 15 Z');
+  b.setAttribute('fill', '#0a0a0c');
+  svg.appendChild(b);
+
+  return svg;
 };
 
 /**

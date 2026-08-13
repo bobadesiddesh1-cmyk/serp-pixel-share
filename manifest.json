@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0DFaTO2M0EwyK1ik3p4GTqnQC2+GaE6ih18c0n+s+WV4/xh6rFxlXPE47L4XIjtFvaXmm981kMqTqYcQ11TkRr3HOFUht2uXSXMQyuJFnlQpv5aBqdKqOkjmfSVXEKVHGaPcWV0mvgOp12XM0xA1VAlfUwQd8I4TqhXx1PdyEl+XjC7wAXB1B1xyeHESntT3aOTgS4fRNcfLOHkaVmf7dcYG7xd99INyaGX3sY8NDop3dgN6ecL3GL4tt0fi0TjIqHA15pg+c4mVHp/TzgWtFrEZNvgyb8WWJL3XeLCKB3K1pwPKhXJ3qOlLjTauK3cZ6vzU3UWsSXIHXWKPT4xiJwIDAQAB",
   "name": "SERP Pixel Share",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Measures where clicks actually go on a Google SERP. Pixel position, effective rank, AI Overview citation share, and blue-link CTR.",
   "minimum_chrome_version": "116",
   "permissions": [

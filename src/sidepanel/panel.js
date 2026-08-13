@@ -588,3 +588,7 @@ $('#copy-id').addEventListener('click', async () => {
     toast('Press Ctrl+C to copy the selected ID.');
   }
 });
+
+// Maker credit mark. Built from SPS.brandMark so the panel and the on-page HUD
+// render the same geometry from one definition.
+$('.brand__mark').appendChild(SPS.brandMark(22));

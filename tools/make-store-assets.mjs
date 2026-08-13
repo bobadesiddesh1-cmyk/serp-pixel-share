@@ -164,6 +164,11 @@ const mapTop = await panel.evaluate(() => {
 const panelMap = await shootPanel(mapTop, 780);
 
 // ------------------------------------------------------------------ compose
+// The BuildWithSiddesh mark, straight from the repo copy of the site favicon.
+const markSvg = fs.readFileSync(path.join(ROOT, 'icons/bws-mark.svg')).toString('base64');
+const markImg = size => `<img class="mk" style="width:${size}px;height:${size}px" `
+  + `src="data:image/svg+xml;base64,${markSvg}">`;
+
 const shots = [
   { file: '01-overlay.jpg',
     head: 'Every result labelled where you already look',
@@ -191,7 +196,7 @@ const css = `
   body{width:1280px;height:800px;overflow:hidden;background:#0E1117;
        font-family:"DejaVu Sans","Liberation Sans",Arial,sans-serif;color:#F2F3F5}
   .wrap{width:1280px;height:800px;padding:52px 60px 0;display:flex;flex-direction:column}
-  h1{font-size:38px;line-height:1.14;font-weight:700;letter-spacing:-.7px;max-width:1000px}
+  h1{font-size:38px;line-height:1.14;font-weight:700;letter-spacing:-.7px;max-width:860px}
   p{margin-top:14px;font-size:18px;line-height:1.5;color:#A6ADBB;max-width:820px}
   .stage{flex:1;margin-top:30px;min-height:0;display:flex}
   .shot{border-radius:10px;overflow:hidden;flex:none;
@@ -206,8 +211,12 @@ const css = `
             padding:11px 0 11px 24px;position:relative}
   .notes li:before{content:"";position:absolute;left:0;top:20px;width:9px;height:9px;
                    border-radius:50%;background:#0B7A5E}
-  .brand{position:absolute;right:60px;top:52px;font-size:13px;letter-spacing:2.4px;
-         color:#5B6473;font-weight:700}
+  .brand{position:absolute;right:60px;top:50px;text-align:right}
+  .brand__p{font-size:13px;letter-spacing:2.4px;color:#5B6473;font-weight:700}
+  .brand__by{display:flex;align-items:center;justify-content:flex-end;gap:7px;
+             margin-top:9px;font-size:12.5px;color:#7C8595}
+  .brand__by b{color:#B9C2D0;font-weight:600}
+  .mk{display:block;border-radius:4px;flex:none}
 `;
 
 const NOTES = {
@@ -233,7 +242,8 @@ for (const s of shots) {
          <ul class="notes">${(NOTES[s.file] || []).map(n => `<li>${n}</li>`).join('')}</ul>
        </div>`;
   const html = `<style>${css}</style><div class="wrap">
-      <div class="brand">SERP PIXEL SHARE</div>
+      <div class="brand"><div class="brand__p">SERP PIXEL SHARE</div>
+        <div class="brand__by">${markImg(17)}<span>built by <b>BuildWithSiddesh</b></span></div></div>
       <h1>${s.head}</h1><p>${s.sub}</p>${body}</div>`;
   await page.setContent(html);
   await page.waitForTimeout(500);
@@ -248,8 +258,8 @@ for (const s of shots) {
 // ------------------------------------------------------------- promo tiles
 const icon = fs.readFileSync(path.join(ROOT, 'icons/icon128.png')).toString('base64');
 const tiles = [
-  { file: 'promo-small-440x280.jpg', w: 440, h: 280, icon: 78, title: 34, sub: 15, pad: 34 },
-  { file: 'promo-marquee-1400x560.jpg', w: 1400, h: 560, icon: 150, title: 78, sub: 30, pad: 100 },
+  { file: 'promo-small-440x280.jpg', w: 440, h: 280, icon: 78, title: 34, sub: 15, pad: 34, by: 16 },
+  { file: 'promo-marquee-1400x560.jpg', w: 1400, h: 560, icon: 150, title: 78, sub: 30, pad: 100, by: 30 },
 ];
 for (const t of tiles) {
   const html = `<style>
@@ -258,13 +268,18 @@ for (const t of tiles) {
          background:linear-gradient(135deg,#0E1117 0%,#161C26 62%,#123A31 100%);
          font-family:"DejaVu Sans","Liberation Sans",Arial,sans-serif;color:#F2F3F5;
          display:flex;align-items:center;gap:${t.pad * 0.6}px;padding:0 ${t.pad}px}
-    img{width:${t.icon}px;height:${t.icon}px;border-radius:${t.icon * 0.22}px;flex:none}
+    img.app{width:${t.icon}px;height:${t.icon}px;border-radius:${t.icon * 0.22}px;flex:none}
+    .by{display:flex;align-items:center;gap:${Math.round(t.by * 0.42)}px;
+        margin-top:${Math.round(t.sub * 0.75)}px;font-size:${Math.round(t.sub * 0.82)}px;color:#8A94A6}
+    .by b{color:#D7DEE8;font-weight:600}
+    .mk{display:block;border-radius:${Math.round(t.by * 0.22)}px;flex:none}
     h1{font-size:${t.title}px;line-height:1.05;font-weight:700;letter-spacing:-1px}
     p{margin-top:${t.sub * 0.5}px;font-size:${t.sub}px;line-height:1.42;color:#9FE8CF}
   </style>
-  <img src="data:image/png;base64,${icon}">
+  <img class="app" src="data:image/png;base64,${icon}">
   <div><h1>SERP Pixel Share</h1>
-  <p>Where the clicks actually go on a Google results page.</p></div>`;
+  <p>Where the clicks actually go on a Google results page.</p>
+  <div class="by">${markImg(t.by)}<span>built by <b>BuildWithSiddesh</b></span></div></div>`;
   await page.setViewportSize({ width: t.w, height: t.h });
   await page.setContent(html);
   await page.waitForTimeout(300);
