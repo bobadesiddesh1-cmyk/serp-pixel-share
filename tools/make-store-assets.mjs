@@ -134,7 +134,11 @@ const shootPanel = async (offset = 0, cap = 880) => {
       const r = n.getBoundingClientRect();
       return r.height > 0 ? Math.max(m, r.bottom + scrollY) : m;
     }, 0);
-    return Math.ceil(last - o + 18);
+    // The maker credit sits outside the views, after <main>. Extend to it so
+    // every panel shot carries the byline rather than cutting just above it.
+    const brand = document.querySelector('#brand');
+    const foot = brand ? brand.getBoundingClientRect().bottom + scrollY : 0;
+    return Math.ceil(Math.max(last, foot) - o + 14);
   }, offset);
   return (await panel.screenshot({ fullPage: true,
     clip: { x: 0, y: offset, width: 430, height: Math.min(cap, Math.max(220, h)) } }))
