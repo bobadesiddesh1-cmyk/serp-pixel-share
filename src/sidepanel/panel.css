@@ -319,3 +319,47 @@ select { margin-bottom: 0; }
   word-break: break-all;
   user-select: all;
 }
+
+/* ── maker credit ──────────────────────────────────────────
+   Sits below the views, above the toast. Hairline rule and muted ink so it
+   reads as a signature on the instrument rather than an ad inside it. */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px 13px;
+  margin-top: 4px;
+  border-top: 1px solid var(--rule);
+  text-decoration: none;
+  color: inherit;
+}
+.brand:hover { background: var(--paper-2); }
+.brand:hover .brand__mark { border-color: var(--teal); color: var(--teal); }
+.brand:hover .brand__go { color: var(--teal); transform: translate(1px, -1px); }
+.brand__mark {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+  border: 1px solid var(--rule-2);
+  border-radius: 3px;
+  padding: 5px 5px 4px;
+  line-height: 1;
+  transition: color .12s, border-color .12s;
+}
+.brand__text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.brand__name { font-size: 11.5px; color: var(--ink-2); }
+.brand__name b { color: var(--ink); font-weight: 600; }
+.brand__line {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.brand__go {
+  margin-left: auto;
+  flex: none;
+  font-size: 13px;
+  color: var(--muted);
+  transition: color .12s, transform .12s;
+}

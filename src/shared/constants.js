@@ -2,7 +2,18 @@
 // Attached to globalThis so content scripts (non-module) and the panel both read it.
 
 const SPS = {
-  VERSION: '0.5.0',
+  VERSION: '0.5.1',
+
+  // Maker credit. Rendered in the panel footer and the on-page HUD, and it is
+  // a plain link — nothing is fetched from this host, no parameters are
+  // appended, and nothing is reported back. It exists so someone who finds the
+  // extension useful can find out who wrote it.
+  BRAND: {
+    name: 'BuildWithSiddesh',
+    host: 'buildwithsiddesh.com',
+    url: 'https://www.buildwithsiddesh.com/',
+    line: 'Rank trackers report a number. This one reads the page.'
+  },
 
   // Element taxonomy. Order = rough top-of-page precedence, not guaranteed.
   TYPES: {

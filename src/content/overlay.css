@@ -208,6 +208,20 @@
 }
 .sps-hud__btn:hover { background: var(--sps-rule); }
 
+/* Maker credit under the HUD button. One line, muted, so the HUD stays a
+   readout and not a billboard. */
+.sps-hud__brand {
+  display: block;
+  margin-top: 6px;
+  font-family: inherit;
+  font-size: 9.5px;
+  letter-spacing: 0.02em;
+  color: var(--sps-muted);
+  text-decoration: none;
+  text-align: center;
+}
+.sps-hud__brand:hover { color: var(--sps-teal); text-decoration: underline; }
+
 @media (prefers-reduced-motion: no-preference) {
   .sps-chip { transition: opacity 120ms ease-out; }
 }

@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.5.1
+
+### Added
+
+- **Maker credit.** The panel carries a footer — a `BWS` mark, "Built by
+  BuildWithSiddesh", and the line *"Rank trackers report a number. This one
+  reads the page."* — linking to buildwithsiddesh.com. The on-page HUD carries
+  a one-line version under the panel button.
+
+  Both are plain `<a>` elements with `target="_blank"` and
+  `rel="noopener noreferrer"`. Nothing is fetched from that host, no query
+  parameters are appended, and no click is reported anywhere — the extension
+  still makes zero outbound requests until you connect Search Console. The host
+  string now shows up in the privacy audit's host grep, so `STORE_LISTING.md`
+  names it explicitly alongside the OAuth scope string rather than leaving the
+  next person to work out whether it is a fourth endpoint.
+
+  Styling follows the existing tokens: hairline top rule, muted ink, teal only
+  on hover. It reads as a signature on the instrument, not an ad inside it.
+
+### Known issue
+
+- **Search Console cannot connect in the published build.** The store assigns
+  its own extension ID, and the OAuth client shipped in this version is
+  registered against the local unpacked ID. `chrome.identity` rejects the
+  mismatch with `bad client id`. Everything else — classification, geometry,
+  overlay, panel, pixel map, CSV export — is unaffected. Fixing it needs an
+  OAuth client created against the store-assigned ID; that value is only
+  visible in the Web Store dashboard after publishing.
+
 ## 0.5.0
 
 Hardening pass driven by the six live captures rather than by guesswork. Every

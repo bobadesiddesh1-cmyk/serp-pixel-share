@@ -374,6 +374,15 @@ const SPS_OVERLAY = (() => {
     btn.addEventListener('click', () => chrome.runtime.sendMessage({ type: 'SPS_OPEN_PANEL' }));
     h.appendChild(btn);
 
+    // Maker credit. A plain link — clicking it navigates, nothing is sent.
+    const brand = document.createElement('a');
+    brand.className = 'sps-hud__brand';
+    brand.href = SPS.BRAND.url;
+    brand.target = '_blank';
+    brand.rel = 'noopener noreferrer';
+    brand.textContent = 'built by ' + SPS.BRAND.host;
+    h.appendChild(brand);
+
     document.body.appendChild(h);
   }
 

@@ -117,13 +117,21 @@ Your scan history and measured SERP data are never transmitted
 anywhere. Uninstalling removes them.
 
 **Verification note — re-check before each submission.** The claim above is only
-true while the shipped code contains no other network calls. Re-run as of 0.5.0,
+true while the shipped code contains no other network calls. Re-run as of 0.5.1,
 the archive being submitted: three `fetch` call sites, all in
 `src/background/gsc.js`, targeting only `searchconsole.googleapis.com` and
 `oauth2.googleapis.com/revoke`; no `XMLHttpRequest`, no `sendBeacon`, no
-`WebSocket`, no remote script loading. The only other host string in the source
-is `www.googleapis.com`, which appears once as the OAuth scope identifier in
-`manifest.json` and is never fetched. Re-run before publishing:
+`WebSocket`, no remote script loading.
+
+Two host strings in the source are never fetched, and the host grep below will
+show both:
+
+- `www.googleapis.com` — the OAuth scope identifier in `manifest.json`.
+- `www.buildwithsiddesh.com` — the `href` of the maker-credit link in the panel
+  footer and the on-page HUD. It navigates only when the user clicks it, carries
+  no query parameters, and nothing is sent to it.
+
+Re-run before publishing:
 
 ```bash
 grep -rnE "fetch\(|XMLHttpRequest|sendBeacon|new WebSocket|importScripts" src/
