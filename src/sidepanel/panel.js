@@ -466,6 +466,15 @@ $('#viewport').addEventListener('change', async e => {
   if (r.ok) state.settings = r.settings;
 });
 
+// Changing this from the panel goes through SPS_SET_SETTINGS, which pokes the
+// results tab to re-scan — the overlay picks the new state up from that pass.
+// The HUD's own buttons take a cheaper route and skip the re-scan; see
+// setHudState in src/content/index.js.
+$('#hud-state').addEventListener('change', async e => {
+  const r = await send({ type: 'SPS_SET_SETTINGS', patch: { hudState: e.target.value } });
+  if (r.ok) state.settings = r.settings;
+});
+
 $('#mode-toggle').addEventListener('click', async () => {
   const order = ['inline', 'boxes', 'off'];
   const cur = state.settings?.overlayMode || 'inline';
@@ -551,6 +560,7 @@ chrome.runtime.onMessage.addListener(msg => {
     state.settings = s.settings;
     $('#owned').value = (s.settings.ownedDomains || []).join('\n');
     vp.value = s.settings.viewport || 'desktop';
+    $('#hud-state').value = s.settings.hudState || 'open';
     if (s.settings.gscProperty) {
       $('#gsc-state').textContent = 'Connected \u00b7 ' + s.settings.gscProperty;
       $('#gsc-disconnect').hidden = false;

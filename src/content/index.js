@@ -15,6 +15,40 @@
     return { ...SPS.DEFAULT_SETTINGS, ...(got[SPS.STORAGE.SETTINGS] || {}) };
   }
 
+  /**
+   * Persist the on-page summary's open/minimised/hidden state and redraw it.
+   *
+   * Written straight to storage rather than through SPS_SET_SETTINGS: that
+   * route answers by sending SPS_SETTINGS_CHANGED back to this tab, which runs
+   * a full re-scan. Re-measuring the page because somebody clicked a minimise
+   * button would be absurd, and the scan would also re-render every chip.
+   *
+   * The redraw reuses the last scan, so it costs one DOM rebuild and nothing
+   * else. The panel stays in step because it reads the same stored settings.
+   */
+  async function setHudState(next) {
+    state.settings = { ...(state.settings || SPS.DEFAULT_SETTINGS), hudState: next };
+    try {
+      const got = await chrome.storage.local.get(SPS.STORAGE.SETTINGS);
+      const cur = { ...SPS.DEFAULT_SETTINGS, ...(got[SPS.STORAGE.SETTINGS] || {}) };
+      await chrome.storage.local.set({
+        [SPS.STORAGE.SETTINGS]: { ...cur, hudState: next }
+      });
+    } catch (_) {
+      // Storage can refuse (quota, incognito teardown). The state still applies
+      // for this page; it just will not survive a reload.
+    }
+    redrawFromCache();
+  }
+
+  /** Re-render the overlay from the last scan, without measuring again. */
+  function redrawFromCache() {
+    const last = state.lastRender;
+    if (!last) return;
+    state.overlaySig = null;
+    SPS_OVERLAY.render(last.elements, { ...last.ctx, settings: state.settings, setHudState });
+  }
+
   async function loadModelOverrides() {
     const got = await chrome.storage.local.get(SPS.STORAGE.MODEL);
     SPS_MODEL.applyOverrides(got[SPS.STORAGE.MODEL] || {});
@@ -136,7 +170,13 @@
       // an identical layout — skip the redraw unless something we draw changed.
       const sig = elements
         .map(e => `${e.type}:${e.yTop}:${e.height}:${Math.round((e.estCTR || 0) * 1e4)}:${e.actualCTR ?? ''}`)
-        .join('|') + `|${state.settings.overlayMode}|${state.settings.viewport}`;
+        .join('|') + `|${state.settings.overlayMode}|${state.settings.viewport}|${state.settings.hudState}`;
+
+      // Kept so the HUD controls can redraw without measuring the page again.
+      state.lastRender = {
+        elements,
+        ctx: { summary, serpHeight, serpTop, showSitelinks: false }
+      };
 
       if (sig !== state.overlaySig) {
         state.overlaySig = sig;
@@ -145,7 +185,8 @@
           summary,
           serpHeight,
           serpTop,
-          showSitelinks: false
+          showSitelinks: false,
+          setHudState
         });
       }
 

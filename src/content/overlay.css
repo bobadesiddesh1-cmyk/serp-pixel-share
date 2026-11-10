@@ -228,3 +228,45 @@
 @media (prefers-reduced-motion: no-preference) {
   .sps-chip { transition: opacity 120ms ease-out; }
 }
+
+/* ── HUD header and controls ───────────────────────────────────────────
+   The pane sits on somebody else's page, so it carries its own minimise and
+   hide controls. Muted until hovered: the numbers are the point, not the
+   chrome around them. */
+.sps-hud__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.sps-hud__head .sps-hud__title { margin: 0; flex: 1; min-width: 0; }
+.sps-hud__ctl {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--sps-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.sps-hud__ctl:hover {
+  color: var(--sps-ink);
+  border-color: var(--sps-rule);
+  background: var(--sps-rule);
+}
+
+/* Minimised: a pill with the name and a way back. */
+.sps-hud--min {
+  padding: 6px 8px;
+  cursor: pointer;
+}
+.sps-hud--min .sps-hud__head { margin-bottom: 0; }
+.sps-hud--min:hover { border-color: var(--sps-muted); }

@@ -334,15 +334,61 @@ const SPS_OVERLAY = (() => {
 
   // ---- HUD ----
 
-  function drawHUD(summary, fellBackTo) {
+  /**
+   * @param {object} summary
+   * @param {string|null} fellBackTo
+   * @param {object} ctx   the render context; carries settings.hudState and
+   *                       setHudState, which persists the choice
+   */
+  function drawHUD(summary, fellBackTo, ctx) {
     document.querySelectorAll('.sps-hud').forEach(n => n.remove());
+
+    // This pane sits on somebody else's page, so it has to be dismissible.
+    // The choice is persisted by the caller: a scan rebuilds every overlay
+    // node, so anything held only in the DOM would reappear on the next pass.
+    const hudState = ctx?.settings?.hudState || 'open';
+    if (hudState === 'off') return;
+    const setState = next => ctx?.setHudState?.(next);
+    const minimised = hudState === 'min';
+
     const h = document.createElement('div');
-    h.className = 'sps-hud';
+    h.className = 'sps-hud' + (minimised ? ' sps-hud--min' : '');
+
+    const head = document.createElement('div');
+    head.className = 'sps-hud__head';
 
     const title = document.createElement('div');
     title.className = 'sps-hud__title';
     title.textContent = 'serp pixel share';
-    h.appendChild(title);
+    head.appendChild(title);
+
+    const ctl = (label, aria, hint, onClick) => {
+      const b = document.createElement('button');
+      b.className = 'sps-hud__ctl';
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-label', aria);
+      b.title = hint;
+      b.addEventListener('click', ev => { ev.stopPropagation(); onClick(); });
+      return b;
+    };
+
+    head.appendChild(minimised
+      ? ctl('+', 'Expand the summary', 'Expand', () => setState('open'))
+      : ctl('–', 'Minimise the summary', 'Minimise', () => setState('min')));
+    // Name the way back in the tooltip. Hiding something with no visible
+    // restore is how a feature gets reported as a bug.
+    head.appendChild(ctl('×', 'Hide the summary',
+      'Hide — bring it back from the side panel, under Setup', () => setState('off')));
+    h.appendChild(head);
+
+    if (minimised) {
+      // Click anywhere on the pill to expand, not just the small control.
+      h.addEventListener('click', () => setState('open'));
+      h.title = 'Expand the summary';
+      document.body.appendChild(h);
+      return;
+    }
 
     const rows = [
       ['elements', summary.count],
@@ -394,7 +440,7 @@ const SPS_OVERLAY = (() => {
   function render(elements, ctx) {
     clear();
     const mode = ctx.settings.overlayMode || 'inline';
-    if (mode === 'off') { drawHUD(ctx.summary); return; }
+    if (mode === 'off') { drawHUD(ctx.summary, null, ctx); return; }
 
     drawRuler(ctx.serpHeight, ctx.serpTop);
     drawFold(ctx.settings.viewport || 'desktop');
@@ -416,7 +462,7 @@ const SPS_OVERLAY = (() => {
     } else if (mode === 'boxes') {
       drawBoxes(elements);
     }
-    drawHUD(ctx.summary, effective !== mode ? effective : null);
+    drawHUD(ctx.summary, effective !== mode ? effective : null, ctx);
   }
 
   return { render, clear, drawHUD };

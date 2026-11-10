@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.5.4
+
+### Added
+
+- **The on-page summary can be minimised or hidden.** It is a fixed pane on
+  somebody else's page, so it now carries its own controls: `–` collapses it
+  to a pill showing just the name, `×` removes it from the page entirely.
+  Clicking anywhere on the pill expands it again.
+
+  The state is persisted, because a scan rebuilds every overlay node from
+  scratch — a choice held only in the DOM would reappear on the next pass, and
+  on a results page that re-scans on mutation that reads as the control being
+  broken. Verified against both a re-scan and a reload; the reload case is the
+  one that proves it, since a re-scan reuses the content script already running
+  and would pass on in-memory state alone.
+
+  Hiding the summary does not hide the measurements. The chips stay on the
+  results, because those are the output; the pane is just a readout of them.
+
+- **Setup carries the same control**, as Shown / Minimised / Hidden. The `×`
+  button's tooltip names it, since hiding something with no visible way back is
+  how a feature gets reported as a bug.
+
+- `test/run-hud.mjs`, driving the real buttons on a results page served at a
+  real `google.com/search` URL.
+
+### Note
+
+The HUD's own buttons write the setting straight to storage and redraw from the
+last scan. They deliberately avoid `SPS_SET_SETTINGS`, which answers by telling
+the tab to re-scan: re-measuring the page because somebody clicked minimise
+would be absurd. The panel's control does go through that route, which is
+correct there — it needs the tab to pick the change up.
+
 ## 0.5.3
 
 Incognito pass. An unpersonalised results page is usually an incognito one, so
