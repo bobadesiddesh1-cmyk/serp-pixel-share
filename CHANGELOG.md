@@ -1,5 +1,55 @@
 # Changelog
 
+## 0.5.3
+
+Incognito pass. An unpersonalised results page is usually an incognito one, so
+this is where a lot of SEO work actually happens — and the extension behaved
+badly there in ways nobody would have noticed until it mattered.
+
+### Fixed
+
+- **Incognito scans were written to disk.** The extension runs in spanning
+  mode, which means `chrome.storage.local` is one store shared by both
+  contexts. Every results page measured in incognito was therefore recorded in
+  the scan log, with its query, and stayed there after the window closed —
+  exactly the thing somebody researching in incognito is relying on not to
+  happen, and often a client's confidential query set.
+
+  Incognito scans are now measured and displayed but never persisted. The cost
+  is real and is stated rather than hidden: blue-link CTR and calibration both
+  read from the scan log, so they cannot see these scans. The panel says so on
+  the scan itself, because a user who works only in incognito would otherwise
+  watch the log stay empty and conclude logging was broken.
+
+- **Re-scan could measure the wrong window.** `activeSerpTab()` asked for
+  `currentWindow`, which is meaningless in a service worker — there is no
+  window a worker is in — and then fell back to the first matching tab in the
+  whole profile. With a results page open in both a normal and an incognito
+  window, pressing Re-scan while reading a page in incognito measured the
+  normal window's results and reported them as the current page. It now uses
+  `lastFocusedWindow`, and the fallback stays inside the context the user is
+  working in, returning nothing rather than crossing the boundary.
+
+### Added
+
+- **Setup now reports incognito access.** Chrome disables every extension in
+  incognito until the user allows it per extension, and the extension cannot
+  announce this from incognito because it is not running there to do it. The
+  panel asks `chrome.extension.isAllowedIncognitoAccess()` from the normal
+  window and, when access is missing, says so and gives the three steps.
+
+- `test/run-incognito.mjs`. Serves the fixture at a real `google.com/search`
+  URL so the declared content script runs, and drives a genuine incognito
+  window opened by the extension itself. Both fixes were confirmed by reverting
+  them and watching the relevant checks fail: without the storage guard the
+  incognito query appears in the log, and without the tab fix the cross-context
+  case reports the normal window's query.
+
+### Verified working in incognito
+
+Overlay chips, the HUD, the side panel opening from the HUD button, and the
+scan itself — twelve chips and zero console errors in a real incognito window.
+
 ## 0.5.2
 
 ### Changed

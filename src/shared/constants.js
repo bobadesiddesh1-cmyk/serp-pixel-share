@@ -2,7 +2,7 @@
 // Attached to globalThis so content scripts (non-module) and the panel both read it.
 
 const SPS = {
-  VERSION: '0.5.2',
+  VERSION: '0.5.3',
 
   // Maker credit. Rendered in the panel footer and the on-page HUD, and it is
   // a plain link — nothing is fetched from this host, no parameters are

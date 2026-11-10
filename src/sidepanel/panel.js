@@ -44,11 +44,14 @@ $$('.tab').forEach(btn => btn.addEventListener('click', () => {
 
 // ── scan view ──
 
-function renderScan(scan) {
+function renderScan(scan, incognito = false) {
   state.scan = scan;
   if (!scan) { $('#scan-empty').hidden = false; $('#scan-body').hidden = true; return; }
   $('#scan-empty').hidden = true;
   $('#scan-body').hidden = false;
+  // Say it on the scan itself. A user who only ever works in incognito would
+  // otherwise watch the scan log stay empty and conclude logging is broken.
+  $('#incog-note').hidden = !incognito;
 
   const s = scan.summary;
   $('#scan-query').textContent = s.query || '(no query)';
@@ -531,7 +534,7 @@ $('#calibrate').addEventListener('click', async () => {
 // ── boot ──
 
 chrome.runtime.onMessage.addListener(msg => {
-  if (msg.type === 'SPS_PANEL_UPDATE') { renderScan(msg.payload); renderAIO(msg.payload); }
+  if (msg.type === 'SPS_PANEL_UPDATE') { renderScan(msg.payload, msg.incognito); renderAIO(msg.payload); }
   if (msg.type === 'SPS_PANEL_ERROR') toast(msg.error, true);
 });
 
@@ -570,7 +573,7 @@ chrome.runtime.onMessage.addListener(msg => {
   }
 
   const latest = await send({ type: 'SPS_GET_LATEST' });
-  if (latest.ok && latest.payload) { renderScan(latest.payload); renderAIO(latest.payload); }
+  if (latest.ok && latest.payload) { renderScan(latest.payload, latest.incognito); renderAIO(latest.payload); }
   refreshLogSummary();
 })();
 
@@ -592,3 +595,24 @@ $('#copy-id').addEventListener('click', async () => {
 // Maker credit mark. Built from SPS.brandMark so the panel and the on-page HUD
 // render the same geometry from one definition.
 $('.brand__mark').appendChild(SPS.brandMark(22));
+
+// Incognito access check. The panel is an extension page, so it can ask Chrome
+// directly whether the user has granted incognito access — the content script
+// cannot, because when access is denied it never runs there to report it.
+(async function incognitoState() {
+  const state = $('#incog-state'), steps = $('#incog-steps');
+  if (!state) return;
+  try {
+    const allowed = await chrome.extension.isAllowedIncognitoAccess();
+    state.textContent = allowed
+      ? 'Allowed — the extension measures incognito results pages.'
+      : 'Not allowed — results pages in incognito are not measured.';
+    state.style.color = allowed ? 'var(--teal)' : 'var(--clay)';
+    steps.hidden = allowed;
+  } catch {
+    // Older Chrome, or the API is unavailable: show the steps rather than
+    // claiming a state we could not read.
+    state.textContent = 'Could not check. If incognito results pages are not measured, allow it below.';
+    steps.hidden = false;
+  }
+})();

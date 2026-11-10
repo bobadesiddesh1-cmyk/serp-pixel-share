@@ -357,3 +357,15 @@ select { margin-bottom: 0; }
   color: var(--muted);
   transition: color .12s, transform .12s;
 }
+
+/* Incognito notice on a scan. Amber, like the AI Overview flag — "something
+   about this reading is different", not "something is wrong". */
+.flag {
+  margin: 0 0 10px;
+  padding: 7px 9px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--ink-2);
+  background: var(--amber-bg);
+  border-left: 2px solid var(--amber);
+}

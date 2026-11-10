@@ -116,6 +116,18 @@ all.
 Your scan history and measured SERP data are never transmitted
 anywhere. Uninstalling removes them.
 
+**Incognito.** Results pages measured in an incognito window are shown but never
+written to the scan log, so nothing about them survives the window closing. The
+extension runs in spanning mode, where extension storage is shared between
+normal and incognito windows, so this is an explicit guard rather than something
+Chrome does for us. The trade-off is that blue-link CTR and model calibration
+read from the scan log and therefore cannot see incognito scans; the panel says
+so on the scan rather than leaving it to be inferred.
+
+Chrome disables all extensions in incognito until you allow each one, under
+chrome://extensions → Details → Allow in Incognito. Setup reports whether access
+has been granted.
+
 **Verification note — re-check before each submission.** The claim above is only
 true while the shipped code contains no other network calls. Re-run as of 0.5.2,
 the archive being submitted: three `fetch` call sites, all in

@@ -33,6 +33,7 @@
 
     <div id="scan-body" hidden>
       <p id="scan-query" class="query"></p>
+      <p id="incog-note" class="flag" hidden>Incognito — measured, but not added to the scan log. Blue-link CTR and calibration will not see this one.</p>
 
       <!-- The finding is the subtraction. Showing rank and effective as two
            equal tiles left the reader to do it themselves. -->
@@ -118,6 +119,16 @@
 
     <h2 class="sec">Fold reference</h2>
     <select id="viewport"></select>
+
+    <h2 class="sec">Incognito</h2>
+    <p class="note">An unpersonalised results page is usually an incognito one, but Chrome disables every extension there until you allow it per extension.</p>
+    <div id="incog-state" class="mono">Checking…</div>
+    <ol class="steps" id="incog-steps" hidden>
+      <li>Open <code>chrome://extensions</code>.</li>
+      <li>Find <b>SERP Pixel Share</b> and click <b>Details</b>.</li>
+      <li>Turn on <b>Allow in Incognito</b>.</li>
+    </ol>
+    <p class="note">Scans made in incognito are measured and shown, but never written to the scan log — so they do not feed blue-link CTR or calibration, and nothing survives the window closing.</p>
 
     <h2 class="sec">Search Console</h2>
     <!-- Shown only while the manifest still carries the placeholder client ID.
