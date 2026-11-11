@@ -43,7 +43,30 @@ const csv = Store.scanToCSV(scan);
 const lines = csv.split('\n');
 check('comment header carries the query', lines[0].startsWith('# query,'), lines[0]);
 check('scanned timestamp is ISO', /# scanned,\d{4}-\d{2}-\d{2}T/.test(lines[1]), lines[1]);
-check('column header present', lines[2].startsWith('type,label,rank'));
+// Found rather than indexed: the comment block grew when provenance was added,
+// and a test that pins the header to line 3 breaks every time it grows again.
+const headerIdx = lines.findIndex(l => !l.startsWith('#'));
+check('column header present', lines[headerIdx]?.startsWith('type,label,rank'), lines[headerIdx]);
+check('comment block records the fold reference',
+  lines.some(l => l.startsWith('# viewport,')), lines.filter(l => l.startsWith('#')).join(' / '));
+check('comment block records how the page was rendered',
+  lines.some(l => l.startsWith('# rendered,')));
+// The one that matters: a spreadsheet opened a month later must still say
+// whether these numbers were measured or projected.
+check('comment block states geometry provenance',
+  lines.some(l => l.startsWith('# geometry,')));
+check('a desktop scan reports measured geometry',
+  lines.some(l => l === '# geometry,measured'),
+  lines.find(l => l.startsWith('# geometry,')));
+const projectedCsv = Store.scanToCSV({
+  ...scan,
+  summary: { ...scan.summary, viewport: 'mobile', realDevice: 'desktop', projected: true, renderWidth: 1512 },
+});
+check('a projected scan says so in capitals, not in passing',
+  /# geometry,PROJECTED from a desktop render - not measured/.test(projectedCsv),
+  projectedCsv.split('\n').find(l => l.startsWith('# geometry,')));
+check('and records the width it was projected from',
+  /# rendered,desktop at 1512px/.test(projectedCsv));
 check('embedded comma/quote/newline is quoted', /"Rates — line1\nline2, with ""quotes"""/.test(csv));
 check('nulls become empty, not the string "null"', !/,null,/.test(csv));
 check('fold flags exported', /,true,false,/.test(csv) || /,true,true,/.test(csv));

@@ -471,3 +471,8 @@ select { margin-bottom: 0; }
   text-transform: uppercase;
   color: var(--muted);
 }
+
+/* Projection flag. Amber like the AI Overview flag: this reading is different
+   in kind, not wrong. */
+.flag--proj { background: var(--amber-bg); border-left-color: var(--amber); }
+.note--warn { color: var(--clay); }

@@ -131,6 +131,11 @@
         scannedAt: Date.now(),
         viewport,
         realDevice,
+        renderWidth: window.innerWidth,
+        // True when the figures describe a mobile layout nobody rendered:
+        // desktop geometry pushed through projectMobileY. The panel, the
+        // clipboard summary and the CSV all have to say so.
+        projected: viewport === 'mobile' && realDevice !== 'mobile',
         count: elements.length,
         serpHeight,
         serpTop,

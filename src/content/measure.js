@@ -56,20 +56,41 @@ const SPS_MEASURE = (() => {
   }
 
   /**
+   * Per-feature height added when a desktop layout is projected to mobile, in
+   * CSS pixels.
+   *
+   * THESE ARE DEFAULTS, in the same sense as the coefficients in
+   * src/model/estimate.js: chosen to be the right order of magnitude, not
+   * derived from measurement. Unlike those, they have no calibration path yet,
+   * which is exactly why anything computed through them is labelled projected
+   * rather than measured everywhere it surfaces.
+   *
+   * Do not tune these to make a number look right.
+   */
+  const MOBILE_INFLATE = {
+    ai_overview: 260,
+    ad: 90,
+    paa: 70,
+    shopping: 140
+  };
+
+  /**
+   * Project a desktop y offset onto a mobile layout.
+   *
    * Mobile SERPs are not just narrower — feature blocks are taller and stack
-   * differently. Without a real mobile render we approximate: scale desktop y
-   * by the observed width ratio and inflate feature block heights.
+   * differently. A real mobile measurement needs Google to have served the
+   * mobile layout, which it only does for a mobile user agent. When it has
+   * not, this approximates: scale y by the square root of the width ratio,
+   * because a narrower column reflows text taller rather than linearly, then
+   * add the per-feature inflation above.
+   *
+   * The result is an estimate of a layout nobody measured. Callers must mark
+   * it as such.
    */
   function projectMobileY(yTop, elementsAbove) {
     const widthRatio = 1920 / 390;              // ~4.9
     const base = yTop / Math.sqrt(widthRatio);  // narrower column = taller content
-    const inflate = elementsAbove.reduce((s, t) => {
-      if (t === SPS.TYPES.AI_OVERVIEW) return s + 260;
-      if (t === SPS.TYPES.AD) return s + 90;
-      if (t === SPS.TYPES.PAA) return s + 70;
-      if (t === SPS.TYPES.SHOPPING) return s + 140;
-      return s;
-    }, 0);
+    const inflate = elementsAbove.reduce((s, t) => s + (MOBILE_INFLATE[t] || 0), 0);
     return Math.round(base + inflate);
   }
 
@@ -98,7 +119,7 @@ const SPS_MEASURE = (() => {
     return Math.round((height / total) * 1000) / 1000;
   }
 
-  return { docOffset, isRendered, serpHeight, serpTop, foldFlags, projectMobileY, pixelShare,
+  return { docOffset, isRendered, serpHeight, serpTop, foldFlags, projectMobileY, MOBILE_INFLATE, pixelShare,
            scrollCost, screenCount };
 })();
 

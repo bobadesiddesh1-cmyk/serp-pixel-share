@@ -140,8 +140,19 @@ export function scanToCSV(scan) {
     const s = String(v);
     return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   };
-  const lines = ['# query,' + esc(scan.summary.query), '# scanned,' +
-                 new Date(scan.summary.scannedAt).toISOString(), cols.join(',')];
+  // The header comments travel with the file. Someone opening this in a
+  // spreadsheet a month from now has no other way to know whether the mobile
+  // numbers were measured or projected from a desktop render.
+  const lines = [
+    '# query,' + esc(scan.summary.query),
+    '# scanned,' + new Date(scan.summary.scannedAt).toISOString(),
+    '# viewport,' + esc(scan.summary.viewport || 'desktop'),
+    '# rendered,' + esc(scan.summary.realDevice || 'desktop')
+      + (scan.summary.renderWidth ? ' at ' + scan.summary.renderWidth + 'px' : ''),
+    '# geometry,' + (scan.summary.projected
+      ? 'PROJECTED from a desktop render - not measured'
+      : 'measured'),
+    cols.join(',')];
   for (const e of scan.elements) {
     lines.push([
       e.type, e.label, e.rank, e.effectivePos, e.domain, e.yTop, e.yBottom,

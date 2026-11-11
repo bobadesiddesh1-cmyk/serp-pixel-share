@@ -61,6 +61,7 @@ function renderScan(scan, incognito = false) {
   // Say it on the scan itself. A user who only ever works in incognito would
   // otherwise watch the scan log stay empty and conclude logging is broken.
   $('#incog-note').hidden = !incognito;
+  renderProjectionNote(scan.summary);
 
   const s = scan.summary;
   $('#scan-query').textContent = s.query || '(no query)';
@@ -83,6 +84,26 @@ function renderScan(scan, incognito = false) {
   renderTable(scan);
 
   $('#mode-toggle').textContent = 'Overlay: ' + (state.settings?.overlayMode || 'inline');
+}
+
+/**
+ * Mobile figures taken on a desktop render are a projection, not a measurement.
+ *
+ * The code already only projected when it had to — the switch has been there
+ * since the first version — but the interface showed both cases identically.
+ * Someone reading "Mobile 390x844" had no way to know whether a number had
+ * been measured or derived from desktop geometry through constants nobody has
+ * calibrated.
+ */
+function renderProjectionNote(s) {
+  const el = $('#proj-note');
+  if (!el) return;
+  if (!s?.projected) { el.hidden = true; return; }
+  el.hidden = false;
+  el.textContent = 'Projected, not measured. Google served the desktop layout'
+    + (s.renderWidth ? ` at ${num(s.renderWidth)}px wide` : '')
+    + '; these mobile figures are derived from it. For real mobile geometry, '
+    + 'open DevTools device emulation and re-scan.';
 }
 
 /** Screens are how people experience depth; raw pixels are how we measure it. */
@@ -595,6 +616,11 @@ function scanSummaryText() {
   }
   L.push('');
 
+  if (s.projected) {
+    L.push('NOTE: mobile figures below are PROJECTED from a desktop render, '
+      + 'not measured. Google serves the mobile layout only to a mobile user agent.');
+    L.push('');
+  }
   L.push(`Page height: ${num(s.serpHeight)}px across ${num(s.count)} measured elements.`);
   if (own) {
     L.push(`Your listing occupies ${pct(own.pixelShare, 1)} of the page.`);
@@ -613,7 +639,8 @@ function scanSummaryText() {
   if (s.unclassified) L.push(`Unclassified blocks: ${num(s.unclassified)} (not counted in the estimate).`);
 
   L.push('');
-  L.push('Measured with SERP Pixel Share \u2014 ' + SPS.BRAND.host);
+  L.push((s.projected ? 'Projected with' : 'Measured with')
+    + ' SERP Pixel Share \u2014 ' + SPS.BRAND.host);
   return L.join('\n');
 }
 
@@ -707,7 +734,35 @@ async function onboardSave() {
 $('#viewport').addEventListener('change', async e => {
   const r = await send({ type: 'SPS_SET_SETTINGS', patch: { viewport: e.target.value } });
   if (r.ok) state.settings = r.settings;
+  renderViewportNote();
 });
+
+/**
+ * Explain what the fold reference does and does not change.
+ *
+ * Desktop and laptop only move the fold line — the geometry underneath is
+ * measured either way. Mobile is different in kind: unless Google served the
+ * mobile layout, every y offset is projected from the desktop one.
+ */
+function renderViewportNote() {
+  const el = $('#viewport-note');
+  if (!el) return;
+  const vp = state.settings?.viewport || 'desktop';
+  const realMobile = state.scan?.summary?.realDevice === 'mobile';
+  if (vp !== 'mobile') {
+    el.textContent = 'Changes which fold line the measurements are compared against. '
+      + 'The geometry itself is measured from the page as rendered.';
+    el.className = 'note';
+    return;
+  }
+  el.textContent = realMobile
+    ? 'Google served the mobile layout here, so these are real measurements.'
+    : 'Google serves the mobile layout only to a mobile user agent. On a desktop '
+      + 'render, mobile positions are projected from desktop geometry using '
+      + 'uncalibrated defaults — treat them as indicative. DevTools device '
+      + 'emulation gives a real mobile render.';
+  el.className = realMobile ? 'note' : 'note note--warn';
+}
 
 // Changing this from the panel goes through SPS_SET_SETTINGS, which pokes the
 // results tab to re-scan — the overlay picks the new state up from that pass.
@@ -928,6 +983,7 @@ chrome.runtime.onMessage.addListener(msg => {
     vp.value = s.settings.viewport || 'desktop';
     $('#hud-state').value = s.settings.hudState || 'open';
     refreshOnboard();
+    renderViewportNote();
     if (s.settings.gscProperty) {
       $('#gsc-state').textContent = 'Connected \u00b7 ' + s.settings.gscProperty;
       $('#gsc-disconnect').hidden = false;

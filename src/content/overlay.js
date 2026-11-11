@@ -399,6 +399,8 @@ const SPS_OVERLAY = (() => {
       ['your est. ctr', summary.ownedCTR != null ? pct(summary.ownedCTR) : '—']
     ];
     if (summary.unclassified > 0) rows.push(['unclassified', summary.unclassified]);
+    // Never let the on-page readout present projected numbers as measured.
+    if (summary.projected) rows.push(['mobile', 'projected']);
     // Say so rather than letting the mode silently disagree with the setting.
     if (fellBackTo) rows.push(['overlay', fellBackTo + ' (no room)']);
 
@@ -410,6 +412,7 @@ const SPS_OVERLAY = (() => {
       if (k === 'effective pos' && summary.ownedEffectivePos && summary.ownedRank &&
           summary.ownedEffectivePos > summary.ownedRank + 1) b.style.color = 'var(--sps-clay)';
       if (k === 'unclassified') b.style.color = '#c0392b';
+      if (k === 'mobile') b.style.color = 'var(--sps-amber)';
       row.append(a, b);
       h.appendChild(row);
     }

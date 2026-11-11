@@ -52,7 +52,14 @@ your own data rather than published averages.
 **On estimates**
 
 Estimated CTR is model output, not measured data, and the interface labels it
-that way everywhere it appears. Connect Search Console to see actual CTR beside
+that way everywhere it appears.
+
+The same applies to mobile. Google serves its mobile layout only to a mobile
+user agent, so on a desktop render the mobile positions are projected from
+desktop geometry using uncalibrated defaults. Every surface that shows such a
+figure — the panel, the on-page readout, the copied summary and the CSV header
+— says "projected" rather than letting it pass as a measurement. For real
+mobile geometry, use DevTools device emulation and re-scan. Connect Search Console to see actual CTR beside
 the estimate. Keep the distinction when this goes into a client report.
 
 ---
@@ -137,7 +144,7 @@ chrome://extensions → Details → Allow in Incognito. Setup reports whether ac
 has been granted.
 
 **Verification note — re-check before each submission.** The claim above is only
-true while the shipped code contains no other network calls. Re-run as of 0.6.0,
+true while the shipped code contains no other network calls. Re-run as of 0.6.1,
 the archive being submitted: three `fetch` call sites, all in
 `src/background/gsc.js`, targeting only `searchconsole.googleapis.com` and
 `oauth2.googleapis.com/revoke`; no `XMLHttpRequest`, no `sendBeacon`, no

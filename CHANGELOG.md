@@ -1,5 +1,48 @@
 # Changelog
 
+## 0.6.1
+
+### Changed
+
+- **Mobile figures are labelled projected, because that is what they are.**
+  Google serves its mobile layout only to a mobile user agent. On a desktop
+  render the extension derives mobile positions from desktop geometry — scaling
+  y by the square root of the width ratio, then adding per-feature inflation.
+
+  The switch between measuring and projecting has been there since the first
+  version and was always correct. What was missing is that the interface
+  presented both identically: a dropdown reading "Mobile 390x844" with no way
+  to tell whether a number had been measured or derived through constants
+  nobody has calibrated. For Indian BFSI, where mobile *is* the traffic, that
+  is the figure most likely to end up in front of a client and the one least
+  able to survive a challenge.
+
+  Every surface now says which it is: a flag above the scan, a `mobile
+  projected` row in the on-page readout, a capitalised note in the copied
+  summary and `# geometry,PROJECTED ...` in the CSV header, where it travels
+  with the file. Setup explains that DevTools device emulation produces a real
+  mobile render.
+
+- The inflation constants are named `MOBILE_INFLATE` and carry the same warning
+  as the CTR coefficients: defaults, right order of magnitude, not derived from
+  measurement — with the added note that unlike those they have no calibration
+  path yet, which is precisely why their output is labelled.
+
+- Scans now record `renderWidth` and `realDevice`, so a figure can be traced
+  back to the window it came from.
+
+### Fixed
+
+- `test/run-csv.mjs` pinned the column header to line 3. Adding provenance
+  comments broke it — the test, not the export. It now finds the header
+  instead of counting lines.
+
+### Added
+
+- `test/run-projection.mjs`, asserting that a projected scan is flagged on all
+  four surfaces and that a measured one is not. Verified by forcing the flag
+  to false and watching six checks fail.
+
 ## 0.6.0
 
 Usability pass. Six changes, all of them things the product knew but never said.
