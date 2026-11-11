@@ -84,10 +84,18 @@ when you press Connect, and only for the read-only scope
 `https://www.googleapis.com/auth/webmasters.readonly`. The extension never
 requests write access to your properties.
 
-**Host permissions** — `www.google.com`, `www.google.co.in`, `www.google.ae` are
-the results pages being measured. `searchconsole.googleapis.com` is the Search
-Console API. `oauth2.googleapis.com` is used only to revoke your token when you
-press Disconnect.
+**Host permissions** — only two: `searchconsole.googleapis.com`, the Search
+Console API, read-only and only after you connect an account; and
+`oauth2.googleapis.com`, used for one thing, revoking your token when you press
+Disconnect.
+
+Google's own search domains are **not** requested as host permissions. The
+content script is declared for them under `content_scripts`, which is what
+grants it access to the page it measures, and the extension never makes a
+network request to Google Search. The declared list covers the country domains
+SEOs work on (google.com, google.co.in, google.co.uk, google.de, google.com.au
+and roughly forty-five more); on a Google results page outside that list the
+extension says so by name rather than appearing broken.
 
 ---
 

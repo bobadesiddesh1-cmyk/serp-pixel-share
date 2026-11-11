@@ -26,6 +26,19 @@
 
   <!-- ── Scan ─────────────────────────────────────────── -->
   <section id="view-scan" class="view">
+    <!-- Without a domain the measurements still run, but nothing can be marked
+         as the user's, so every headline number renders as an em-dash. Asking
+         here beats leaving them to find the field in Setup. -->
+    <div id="onboard" class="onboard" hidden>
+      <p class="onboard__h">Which domain is yours?</p>
+      <p class="onboard__b">Needed to work out what your rank is worth. Until it is set, positions lost, effective rank and estimated CTR stay empty.</p>
+      <div class="onboard__row">
+        <input id="onboard-domain" type="text" placeholder="example.com" autocomplete="off" spellcheck="false" aria-label="Your domain">
+        <button id="onboard-save" class="btn btn--go">Save</button>
+      </div>
+      <p class="onboard__n">A full URL is fine — it will be trimmed to the domain. Add more in Setup.</p>
+    </div>
+
     <div id="scan-empty" class="empty">
       <p class="empty__h">No results page measured yet</p>
       <p class="empty__b">Open a Google results page, then press Re-scan.</p>

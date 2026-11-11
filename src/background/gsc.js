@@ -276,9 +276,6 @@ export async function calibrateFromGSC(property, scanLog, days = 90) {
     })
     .filter(Boolean);
 
-  return {
-    sampleSize: enriched.length,
-    skippedUnanchored,
-    coefficients: SPS_MODEL.calibrate(enriched)
-  };
+  const { coefficients, counts, minRows } = SPS_MODEL.calibrate(enriched);
+  return { sampleSize: enriched.length, skippedUnanchored, coefficients, counts, minRows };
 }

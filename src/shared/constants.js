@@ -165,6 +165,125 @@ SPS.brandMark = function (size) {
 };
 
 /**
+ * Google search domains the content script is declared for.
+ *
+ * Kept here so the service worker and the panel agree with the manifest
+ * instead of each carrying their own copy — the drift that produced is a tab
+ * the panel can see but cannot act on, with no explanation.
+ *
+ * MUST stay in step with content_scripts[0].matches in manifest.json;
+ * test/run-units.mjs asserts that.
+ */
+SPS.GOOGLE_TLDS = [
+    "com",
+    "co.in",
+    "co.uk",
+    "ca",
+    "com.au",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "nl",
+    "be",
+    "ch",
+    "at",
+    "se",
+    "no",
+    "dk",
+    "fi",
+    "ie",
+    "pt",
+    "pl",
+    "cz",
+    "gr",
+    "com.tr",
+    "ru",
+    "co.za",
+    "ae",
+    "com.sa",
+    "com.eg",
+    "com.ng",
+    "co.ke",
+    "com.sg",
+    "com.my",
+    "co.id",
+    "co.th",
+    "com.ph",
+    "com.vn",
+    "co.jp",
+    "com.hk",
+    "com.tw",
+    "com.br",
+    "com.mx",
+    "com.ar",
+    "cl",
+    "com.co",
+    "com.pe",
+    "co.nz",
+    "com.pk",
+    "com.bd",
+    "lk",
+    "com.np"
+  ];
+
+/** Match patterns for chrome.tabs.query. */
+SPS.serpMatchPatterns = function () {
+  return SPS.GOOGLE_TLDS.map(t => `https://*.google.${t}/search*`);
+};
+
+/**
+ * Any Google results page, supported or not.
+ *
+ * Parsed rather than pattern-matched against the whole URL. The regex version
+ * of this accepted `google.com.evil.example`, because a character class of
+ * [a-z.] for the TLD happily swallows further labels — so an attacker-chosen
+ * host read as Google. The suffix after "google." is now capped at two
+ * letters-only labels, which is every real Google domain and nothing else.
+ */
+SPS.isGoogleSerp = function (url) {
+  let u;
+  try { u = new URL(url); } catch { return false; }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') return false;
+  if (!/^\/search\b/.test(u.pathname)) return false;
+  const host = u.hostname.toLowerCase();
+  return /^(?:[a-z0-9-]+\.)*google\.[a-z]{2,}(?:\.[a-z]{2,})?$/.test(host);
+};
+
+/** A Google results page this build actually measures. */
+SPS.isSupportedSerp = function (url) {
+  if (!SPS.isGoogleSerp(url)) return false;
+  let host;
+  try { host = new URL(url).hostname.replace(/^www\./i, '').toLowerCase(); }
+  catch { return false; }
+  return SPS.GOOGLE_TLDS.some(t => host === 'google.' + t || host.endsWith('.google.' + t));
+};
+
+/**
+ * Normalise whatever the user typed into a bare registrable domain.
+ *
+ * People paste URLs. "https://www.hdfc.bank.in/personal/borrow" has to become
+ * "hdfc.bank.in" or the domain silently never matches and the panel stays
+ * empty, which is indistinguishable from "you do not rank here".
+ *
+ * Returns '' for anything that cannot be a hostname, so callers can reject it.
+ */
+SPS.normaliseDomain = function (input) {
+  const d = String(input || '')
+    .trim()
+    .replace(/^[a-z]+:\/\//i, '')   // scheme
+    .replace(/^[^/@]*@/, '')        // userinfo
+    .split(/[/?#]/)[0]              // path, query, fragment
+    .split(':')[0]                  // port
+    .replace(/^www\./i, '')
+    .replace(/\.$/, '')
+    .toLowerCase();
+  // Must look like a hostname: at least one dot, no whitespace, legal chars.
+  if (!d || /\s/.test(d) || !d.includes('.') || !/^[a-z0-9.-]+$/.test(d)) return '';
+  return d;
+};
+
+/**
  * Registrable-domain match, anchored at a label boundary.
  *
  * `host.endsWith(domain)` is wrong and quietly so: "notgoogle.com" ends with

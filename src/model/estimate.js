@@ -154,9 +154,20 @@ const SPS_MODEL = (() => {
   }
 
   /**
+   * Minimum single-feature rows before a coefficient is trusted. Below this a
+   * median is noise dressed as a measurement.
+   */
+  const MIN_CALIBRATION_ROWS = 8;
+
+  /**
    * Calibrate suppression coefficients from your own GSC data.
    * rows: [{ query, position, ctr, aioPresent, featuresAbove: [] }]
    * Solves per-feature: observed CTR / expected-without-feature, median across queries.
+   *
+   * Returns counts for EVERY feature seen, not just the ones that cleared the
+   * threshold. Reporting only the solved ones made the button read as
+   * permanently broken: a user with seven rows for AI Overview was told
+   * "not enough data" with no indication they were one query away.
    */
   function calibrate(rows, viewport = 'desktop') {
     const buckets = {};
@@ -172,14 +183,15 @@ const SPS_MODEL = (() => {
       const f = feats[0];
       (buckets[f] ||= []).push(ratio);
     }
-    const out = {};
+    const coefficients = {};
+    const counts = {};
     for (const [f, arr] of Object.entries(buckets)) {
-      if (arr.length < 8) continue;       // not enough signal
+      counts[f] = arr.length;
+      if (arr.length < MIN_CALIBRATION_ROWS) continue;
       arr.sort((a, b) => a - b);
-      out[f] = round(arr[Math.floor(arr.length / 2)], 3);
-      out[f + '__n'] = arr.length;
+      coefficients[f] = round(arr[Math.floor(arr.length / 2)], 3);
     }
-    return out;
+    return { coefficients, counts, minRows: MIN_CALIBRATION_ROWS };
   }
 
   function applyOverrides(o) { SPS_MODEL._overrides = o || {}; }
@@ -188,7 +200,7 @@ const SPS_MODEL = (() => {
   function round(v, d = 4) { const m = Math.pow(10, d); return Math.round(v * m) / m; }
 
   return {
-    BASE_CURVE, ELEMENT_SHARE, SUPPRESSION, DECAY_K,
+    BASE_CURVE, ELEMENT_SHARE, SUPPRESSION, DECAY_K, MIN_CALIBRATION_ROWS,
     baseCTR, pixelDecay, featureSuppression,
     estimate, effectivePosition, normalise, calibrate, applyOverrides,
     _overrides: {}

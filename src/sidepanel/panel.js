@@ -44,8 +44,16 @@ $$('.tab').forEach(btn => btn.addEventListener('click', () => {
 
 // ── scan view ──
 
+/** Ask for a domain whenever there is not one, wherever the user is looking. */
+function refreshOnboard() {
+  const has = (state.settings?.ownedDomains || []).length > 0;
+  const el = $('#onboard');
+  if (el) el.hidden = has;
+}
+
 function renderScan(scan, incognito = false) {
   state.scan = scan;
+  refreshOnboard();
   if (!scan) { $('#scan-empty').hidden = false; $('#scan-body').hidden = true; return; }
   $('#scan-empty').hidden = true;
   $('#scan-body').hidden = false;
@@ -98,8 +106,11 @@ function renderHero(s, own) {
 
   if (s.ownedRank == null || s.ownedEffectivePos == null) {
     big.textContent = '—';
+    const configured = (state.settings?.ownedDomains || []).length > 0;
     say.textContent = s.ownedRank == null
-      ? 'None of your domains appear in these results. Add or check them in Setup.'
+      ? (configured
+          ? 'None of your domains appear in these results.'
+          : 'Set your domain above to see what your rank is worth here.')
       : 'Not enough to estimate a position for this result.';
     return;
   }
@@ -456,10 +467,40 @@ function download(filename, text, mime = 'text/csv;charset=utf-8') {
 // ── setup view ──
 
 $('#save-owned').addEventListener('click', async () => {
-  const list = $('#owned').value.split('\n').map(s => s.trim()).filter(Boolean);
+  const raw = $('#owned').value.split('\n').map(x => x.trim()).filter(Boolean);
+  const list = [...new Set(raw.map(SPS.normaliseDomain).filter(Boolean))];
+  const bad = raw.length - raw.filter(x => SPS.normaliseDomain(x)).length;
   const r = await send({ type: 'SPS_SET_SETTINGS', patch: { ownedDomains: list } });
-  if (r.ok) { state.settings = r.settings; toast('Saved ' + list.length + ' domains.'); }
+  if (r.ok) {
+    state.settings = r.settings;
+    $('#owned').value = list.join('\n');
+    refreshOnboard();
+    toast(bad
+      ? `Saved ${list.length}. Ignored ${bad} that did not look like domains.`
+      : 'Saved ' + list.length + ' domains.');
+  }
 });
+
+$('#onboard-save').addEventListener('click', onboardSave);
+$('#onboard-domain').addEventListener('keydown', e => {
+  if (e.key === 'Enter') onboardSave();
+});
+
+async function onboardSave() {
+  const d = SPS.normaliseDomain($('#onboard-domain').value);
+  if (!d) return toast('That does not look like a domain. Try example.com', true);
+  const list = [...new Set([...(state.settings?.ownedDomains || []), d])];
+  const r = await send({ type: 'SPS_SET_SETTINGS', patch: { ownedDomains: list } });
+  if (!r.ok) return toast(r.error || 'Could not save.', true);
+  state.settings = r.settings;
+  $('#owned').value = list.join('\n');
+  refreshOnboard();
+  toast('Saved ' + d + '.');
+  // Re-measure so the headline numbers fill in immediately rather than waiting
+  // for the next scan — this is the moment the product is meant to prove itself.
+  const re = await send({ type: 'SPS_RESCAN' });
+  if (re?.ok && re.payload) { renderScan(re.payload); renderAIO(re.payload); }
+}
 
 $('#viewport').addEventListener('change', async e => {
   const r = await send({ type: 'SPS_SET_SETTINGS', patch: { viewport: e.target.value } });
@@ -531,14 +572,63 @@ $('#calibrate').addEventListener('click', async () => {
   $('#cal-out').textContent = 'Solving…';
   const r = await send({ type: 'SPS_CALIBRATE', days: 90 });
   if (!r.ok) { $('#cal-out').textContent = r.error; return; }
-  const coeffs = Object.entries(r.coefficients).filter(([k]) => !k.endsWith('__n'));
-  if (!coeffs.length) {
-    $('#cal-out').textContent = 'Sample of ' + r.sampleSize + ' rows. Not enough single-feature queries yet — scan more keywords.';
+  renderCalibration(r);
+});
+
+/**
+ * Show every feature's progress, not only the ones that solved. "Not enough
+ * data" with no number is indistinguishable from "this will never work", and
+ * somebody one query short of the threshold deserves to know that.
+ */
+function renderCalibration(r) {
+  const out = $('#cal-out');
+  out.textContent = '';
+  const min = r.minRows || 8;
+  const counts = r.counts || {};
+  const solved = r.coefficients || {};
+  const names = [...new Set([...Object.keys(counts), ...Object.keys(solved)])];
+
+  const head = document.createElement('div');
+  head.textContent = `Sample ${num(r.sampleSize)} rows`
+    + (r.skippedUnanchored ? ` \u00b7 ${num(r.skippedUnanchored)} skipped (your result not located)` : '');
+  out.appendChild(head);
+
+  if (!names.length) {
+    const p = document.createElement('p');
+    p.className = 'note';
+    p.textContent = 'No single-feature queries in the log yet. Calibration can only '
+      + 'attribute a drop when exactly one feature sits above you, so measure more '
+      + 'results pages — ideally ones with a single feature above your listing.';
+    out.appendChild(p);
     return;
   }
-  $('#cal-out').textContent = 'Sample ' + r.sampleSize + ' \u00b7 ' +
-    coeffs.map(([k, v]) => k.replace('ai_overview', 'AIO') + ' ' + v).join(' \u00b7 ');
-});
+
+  for (const f of names.sort()) {
+    const n = counts[f] || 0;
+    const row = document.createElement('div');
+    row.className = 'calrow';
+    const k = document.createElement('span');
+    k.textContent = SPS.LABELS[f] || f;
+    const v = document.createElement('span');
+    if (solved[f] != null) {
+      v.textContent = `\u00d7${solved[f]}  (${num(n)} queries)`;
+      v.className = 'calrow__v calrow__v--ok';
+    } else {
+      v.textContent = `${num(n)} of ${min}`;
+      v.className = 'calrow__v';
+    }
+    row.append(k, v);
+    out.appendChild(row);
+  }
+
+  if (!Object.keys(solved).length) {
+    const p = document.createElement('p');
+    p.className = 'note';
+    p.textContent = `Nothing solved yet — each feature needs ${min} queries where it is `
+      + 'the only thing above your result. Until then the shipped defaults are used.';
+    out.appendChild(p);
+  }
+}
 
 // ── boot ──
 
@@ -561,6 +651,7 @@ chrome.runtime.onMessage.addListener(msg => {
     $('#owned').value = (s.settings.ownedDomains || []).join('\n');
     vp.value = s.settings.viewport || 'desktop';
     $('#hud-state').value = s.settings.hudState || 'open';
+    refreshOnboard();
     if (s.settings.gscProperty) {
       $('#gsc-state').textContent = 'Connected \u00b7 ' + s.settings.gscProperty;
       $('#gsc-disconnect').hidden = false;

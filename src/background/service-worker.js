@@ -61,15 +61,15 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
           });
 
         case 'SPS_RESCAN': {
-          const tab = await activeSerpTab();
-          if (!tab) return respond({ ok: false, error: 'No Google results tab in focus.' });
+          const { tab, error } = await requireSerpTab();
+          if (!tab) return respond({ ok: false, error });
           const res = await chrome.tabs.sendMessage(tab.id, { type: 'SPS_REQUEST_SCAN' });
           return respond(res || { ok: false });
         }
 
         case 'SPS_DIAGNOSTIC': {
-          const tab = await activeSerpTab();
-          if (!tab) return respond({ ok: false, error: 'No Google results tab in focus.' });
+          const { tab, error } = await requireSerpTab();
+          if (!tab) return respond({ ok: false, error });
           const res = await chrome.tabs.sendMessage(tab.id, { type: 'SPS_REQUEST_DIAGNOSTIC' });
           return respond(res || { ok: false, error: 'No response from the results page.' });
         }
@@ -79,7 +79,7 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
 
         case 'SPS_SET_SETTINGS': {
           const next = await Store.setSettings(msg.patch);
-          const tab = await activeSerpTab();
+          const { tab } = await findSerpTab();
           if (tab) chrome.tabs.sendMessage(tab.id, { type: 'SPS_SETTINGS_CHANGED' }).catch(() => {});
           return respond({ ok: true, settings: next });
         }
@@ -129,11 +129,9 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
           if (!s.gscProperty) return respond({ ok: false, error: 'Connect a GSC property first.' });
           const log = await Store.getScanLog();
           const out = await GSC.calibrateFromGSC(s.gscProperty, log, msg.days || 90);
-          const clean = {};
-          for (const [k, v] of Object.entries(out.coefficients)) {
-            if (!k.endsWith('__n')) clean[k] = v;
-          }
-          await Store.setModelOverrides(clean);
+          // calibrate() now returns only solved coefficients, so there is
+          // nothing to strip before storing them.
+          await Store.setModelOverrides(out.coefficients);
           return respond({ ok: true, ...out });
         }
 
@@ -182,16 +180,44 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
  * silently measure the other window's page and report it as the current one.
  * The fallback now stays inside the context the user is working in, and returns
  * nothing rather than crossing the boundary.
+ *
+ * Returns { tab } when there is one to act on, or { unsupported } naming the
+ * host when the user IS on a Google results page that this build does not
+ * cover. Saying "no results tab" while one is plainly open on screen is the
+ * kind of answer that gets an extension uninstalled.
  */
-async function activeSerpTab() {
-  const isSerp = t => /google\.[a-z.]+\/search/.test(t?.url || '');
+async function findSerpTab() {
   const [focused] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-  if (isSerp(focused)) return focused;
+  if (SPS.isSupportedSerp(focused?.url)) return { tab: focused };
 
   const wantIncognito = focused?.incognito === true;
-  const tabs = await chrome.tabs.query({
-    url: ['*://www.google.com/search*', '*://www.google.co.in/search*', '*://www.google.ae/search*']
-  });
-  return tabs.find(t => t.incognito === wantIncognito) || null;
+  const tabs = await chrome.tabs.query({ url: SPS.serpMatchPatterns() });
+  const hit = tabs.find(t => t.incognito === wantIncognito);
+  if (hit) return { tab: hit };
+
+  // Nothing supported. Is the user looking at a Google results page anyway?
+  if (SPS.isGoogleSerp(focused?.url)) {
+    try { return { unsupported: new URL(focused.url).hostname.replace(/^www\./i, '') }; }
+    catch { /* fall through */ }
+  }
+  const all = await chrome.tabs.query({ active: true });
+  const other = all.find(t => t.incognito === wantIncognito && SPS.isGoogleSerp(t.url));
+  if (other) {
+    try { return { unsupported: new URL(other.url).hostname.replace(/^www\./i, '') }; }
+    catch { /* fall through */ }
+  }
+  return {};
+}
+
+/** Message-handler shorthand: the tab, or the error to answer with. */
+async function requireSerpTab() {
+  const r = await findSerpTab();
+  if (r.tab) return r;
+  return {
+    error: r.unsupported
+      ? `${r.unsupported} is a Google results page this build does not measure yet. ` +
+        'Supported domains are listed in the extension description — tell me which one you need.'
+      : 'No Google results tab in focus.'
+  };
 }
 
