@@ -476,3 +476,11 @@ select { margin-bottom: 0; }
    in kind, not wrong. */
 .flag--proj { background: var(--amber-bg); border-left-color: var(--amber); }
 .note--warn { color: var(--clay); }
+
+/* Results-not-recognised alarm. Clay, not amber: unlike a projection or an
+   incognito note, this means the figures on screen are incomplete. */
+.flag--alarm {
+  background: var(--paper-2);
+  border-left-color: var(--clay);
+  color: var(--clay);
+}

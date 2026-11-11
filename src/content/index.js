@@ -152,7 +152,8 @@
         ownedCTR: ownedEl?.estCTR ?? null,
         ownedUrl: ownedEl?.url ?? null,
         adCount: elements.filter(e => e.type === SPS.TYPES.AD).length,
-        organicCount: elements.filter(e => e.type === SPS.TYPES.ORGANIC).length
+        organicCount: elements.filter(e => e.type === SPS.TYPES.ORGANIC).length,
+        ...organicHealth(SPS_CLASSIFY.lastTrace || [])
       };
 
       // GSC actuals, best-effort. Never blocks the render.
@@ -317,6 +318,33 @@
    * wrong: it pairs what the classifier decided with enough structure to see
    * what it should have decided.
    */
+  /**
+   * Did we lose organic results, and to what?
+   *
+   * The unclassified alarm cannot see this failure. When a feature detector
+   * over-claims a wrapper, the organics inside it are skipped AND their space
+   * is explained by the wrapper, so unclassified stays at zero and the page
+   * reports healthy while every chip is missing. That is the same blind spot
+   * the invented-AI-Overview bug had.
+   *
+   * Two signals, both chosen to be unambiguous rather than merely suspicious:
+   *  - noOrganics: titles were on the page but not one became an organic.
+   *    Every Google results page with result titles has organics.
+   *  - absorbedByAd: an UNMARKED result inside an ad claim. Real ad titles
+   *    carry the ad marker and are checked first, so this is never a real ad.
+   */
+  function organicHealth(trace) {
+    const candidates = trace.filter(t => t.outcome !== 'no-link').length;
+    const organic = trace.filter(t => t.outcome === 'organic').length;
+    const absorbedByAd = trace.filter(t =>
+      t.outcome === 'inside-claimed-block' && t.claimedAs === SPS.TYPES.AD).length;
+    return {
+      titleCandidates: candidates,
+      absorbedByAd,
+      organicAlarm: (candidates >= 3 && organic === 0) || absorbedByAd > 0,
+    };
+  }
+
   async function diagnostic() {
     const s = state.scan || await scan();
     if (!s) return { ok: false, error: 'Scan produced no result.' };
@@ -342,6 +370,24 @@
         domain: e.domain ?? null, title: (e.title || '').slice(0, 80),
         estCTR: e.estCTR, effectivePos: e.effectivePos ?? null, owned: !!e.owned
       })),
+      // What became of every result title on the page. The question a missing
+      // chip raises, answered per result: classified, or skipped and why — and
+      // when skipped for sitting inside a claimed block, what that block was.
+      organicTrace: (SPS_CLASSIFY.lastTrace || []).map(t => ({
+        title: t.title,
+        host: t.host,
+        outcome: t.outcome,
+        claimedAs: t.claimedAs ?? null,
+        block: t.blockNode ? { ...fingerprint(t.blockNode), geometry: SPS_MEASURE.docOffset(t.blockNode) } : null,
+        swallowedBy: t.byNode ? { ...fingerprint(t.byNode), geometry: SPS_MEASURE.docOffset(t.byNode) } : null,
+      })),
+      overlay: {
+        mode: state.settings?.overlayMode || 'inline',
+        hudState: state.settings?.hudState || 'open',
+        chipsOnPage: document.querySelectorAll('.sps-chip').length,
+        boxesOnPage: document.querySelectorAll('.sps-box').length,
+        hudPresent: !!document.querySelector('.sps-hud'),
+      },
       aio: {
         containerFound: !!aioContainer,
         fingerprint: fingerprint(aioContainer),

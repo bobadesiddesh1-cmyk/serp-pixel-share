@@ -1,5 +1,57 @@
 # Changelog
 
+## 0.6.2
+
+Reported live: on a results page with Google's collapsible **"Hide sponsored
+results"** section, no organic result got a label, and nothing anywhere said
+anything was wrong. The overlay was running — the pixel ruler drew — but every
+chip was missing.
+
+### Not fixed yet, and why
+
+The cause cannot be confirmed from here: Google's live markup for that section
+is not loadable in this environment, and the handoff rules forbid loosening a
+selector to match something unseen. The most likely mechanism is a feature
+detector claiming a wrapper that contains the organic results, which then skips
+every organic inside it. This release makes that failure **visible** and makes
+the next diagnostic capture **decisive**, rather than guessing at a selector.
+
+### Added
+
+- **A results-not-recognised alarm.** The unclassified counter structurally
+  cannot catch this failure: when a detector over-claims a wrapper, the
+  organics inside are skipped *and* their space is explained by the wrapper,
+  so unclassified stays at zero and the page reports healthy. The same blind
+  spot let the invented-AI-Overview bug through. Two unambiguous triggers:
+  titles on the page but not one recognised as organic; or an unmarked result
+  inside an ad claim. Shown in the on-page readout and as a flag in the panel
+  pointing at the diagnostic export.
+
+- **A per-result trace in the diagnostic export.** Every result title the
+  classifier saw, with what became of it — organic, or skipped and why — and,
+  when skipped for sitting inside a claimed block, what claimed it and a
+  structural fingerprint of that block. Plus the overlay's state: mode, chips
+  and boxes on the page, HUD present. Recorded during the real classification
+  pass rather than by replaying it afterwards, so it cannot drift from the
+  decision it describes.
+
+### Fixed
+
+- **The ad-marker check only searched descendants.** `querySelector` never
+  matches the element it is called on, so a real ad whose resolved block *is*
+  the `[data-text-ad]` element, outside `#tads`, fell through to the
+  claimed-block test. Skipping was unaffected, but the new alarm read it as an
+  organic swallowed by an ad — a false alarm on every page whose ads are not in
+  `#tads`, which the new sponsored section may well not be. Found by the alarm's
+  own test failing, not by review. Now checks the block, its ancestors and its
+  descendants.
+
+- `test/run-organic-alarm.mjs` reproduces the reported symptom in the fixture —
+  zero organics, unclassified at zero, silence — and asserts the alarm fires,
+  attributes it, and names the swallowing block in the trace. A second case puts
+  a marked ad outside `#tads` and asserts it does **not** alarm; that check fails
+  against the old descendant-only test.
+
 ## 0.6.1
 
 ### Changed

@@ -401,6 +401,9 @@ const SPS_OVERLAY = (() => {
     if (summary.unclassified > 0) rows.push(['unclassified', summary.unclassified]);
     // Never let the on-page readout present projected numbers as measured.
     if (summary.projected) rows.push(['mobile', 'projected']);
+    // Missing chips with no explanation is the worst failure this tool has:
+    // it looks like "nothing to report" rather than "something went wrong".
+    if (summary.organicAlarm) rows.push(['results', 'not recognised']);
     // Say so rather than letting the mode silently disagree with the setting.
     if (fellBackTo) rows.push(['overlay', fellBackTo + ' (no room)']);
 
@@ -413,6 +416,7 @@ const SPS_OVERLAY = (() => {
           summary.ownedEffectivePos > summary.ownedRank + 1) b.style.color = 'var(--sps-clay)';
       if (k === 'unclassified') b.style.color = '#c0392b';
       if (k === 'mobile') b.style.color = 'var(--sps-amber)';
+      if (k === 'results') b.style.color = '#c0392b';
       row.append(a, b);
       h.appendChild(row);
     }

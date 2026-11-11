@@ -62,6 +62,7 @@ function renderScan(scan, incognito = false) {
   // otherwise watch the scan log stay empty and conclude logging is broken.
   $('#incog-note').hidden = !incognito;
   renderProjectionNote(scan.summary);
+  renderOrganicAlarm(scan.summary);
 
   const s = scan.summary;
   $('#scan-query').textContent = s.query || '(no query)';
@@ -104,6 +105,26 @@ function renderProjectionNote(s) {
     + (s.renderWidth ? ` at ${num(s.renderWidth)}px wide` : '')
     + '; these mobile figures are derived from it. For real mobile geometry, '
     + 'open DevTools device emulation and re-scan.';
+}
+
+/**
+ * Results on the page that the classifier did not recognise.
+ *
+ * Says so plainly and points at the one artefact that settles it. Missing
+ * chips with no message read as "nothing to report", which is the most
+ * misleading thing this panel can do.
+ */
+function renderOrganicAlarm(s) {
+  const el = $('#organic-alarm');
+  if (!el) return;
+  if (!s?.organicAlarm) { el.hidden = true; return; }
+  el.hidden = false;
+  const lost = s.absorbedByAd
+    ? `${num(s.absorbedByAd)} result${s.absorbedByAd > 1 ? 's were' : ' was'} absorbed into a block detected as an ad`
+    : `${num(s.titleCandidates)} result titles are on the page but none were recognised as organic results`;
+  el.textContent = `${lost}, so they have no labels and the figures below are incomplete. `
+    + 'Google has likely changed this page\'s layout. Setup \u2192 Download diagnostic JSON '
+    + 'and send it over \u2014 it records exactly what happened to each result.';
 }
 
 /** Screens are how people experience depth; raw pixels are how we measure it. */

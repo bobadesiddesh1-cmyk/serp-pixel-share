@@ -246,17 +246,60 @@ const SPS_CLASSIFY = (() => {
     return best;
   }
 
-  function organics(excludeNodes) {
+  /**
+   * @param {Node[]} excludeNodes  blocks already claimed by a feature
+   * @param {object} [diag]        { claimedAs: Map<Node,type>, trace: [] } —
+   *   when given, every candidate title records what became of it. This is the
+   *   question a missing chip raises, and the only way to answer it from a live
+   *   page we cannot load ourselves.
+   */
+  function organics(excludeNodes, diag = null) {
     const out = [];
+    const note = (h3, a, outcome, extra = {}) => {
+      if (!diag) return;
+      diag.trace.push({
+        title: (h3.textContent || '').trim().slice(0, 80),
+        host: a ? hostOf(a.href) : null,
+        outcome,
+        ...extra,
+      });
+    };
     const anchors = document.querySelectorAll('#search a h3, #rso a h3, #center_col a h3');
     for (const h3 of anchors) {
       const a = h3.closest('a[href^="http"]');
-      if (!a) continue;
+      if (!a) { note(h3, null, 'no-link'); continue; }
       const block = resultBlock(a);
-      if (!block || !SPS_MEASURE.isRendered(block)) continue;
-      if (excludeNodes.some(n => n.contains(block) || n === block)) continue;
-      if (block.querySelector('[data-text-ad]') || block.closest('#tads, #tadsb, #bottomads')) continue;
-      if (out.some(o => o.block === block)) continue;
+      if (!block) { note(h3, a, 'no-block'); continue; }
+      if (!SPS_MEASURE.isRendered(block)) { note(h3, a, 'not-rendered', { blockNode: block }); continue; }
+      // Ad markers are checked BEFORE the claimed-block test. Both skip the
+      // result, so behaviour is unchanged — but the recorded reason has to
+      // mean one thing. A real ad's title is marked; checking markers first
+      // means "inside-claimed-block" never describes a genuine ad, so when it
+      // reports claimedAs: ad, an unmarked result was swallowed by something
+      // the ad detector over-claimed. That is the signal worth having.
+      // closest() covers the block itself and its ancestors; querySelector()
+      // only ever searched descendants. A real ad whose resolved block IS the
+      // marked element, outside #tads, used to fall through to the claimed-
+      // block test and get reported as an organic swallowed by an ad — a
+      // false alarm on every page whose ads are not in #tads, which Google's
+      // collapsible sponsored section may well not be. Skip behaviour is
+      // unchanged: those were skipped as claimed blocks before.
+      if (block.closest('[data-text-ad]') || block.querySelector('[data-text-ad]')) {
+        note(h3, a, 'contains-ad-marker', { blockNode: block }); continue;
+      }
+      if (block.closest('#tads, #tadsb, #bottomads')) {
+        note(h3, a, 'inside-ad-container', { blockNode: block }); continue;
+      }
+      const swallowedBy = excludeNodes.find(n => n.contains(block) || n === block);
+      if (swallowedBy) {
+        note(h3, a, 'inside-claimed-block', {
+          claimedAs: diag?.claimedAs.get(swallowedBy) ?? 'unknown',
+          blockNode: block, byNode: swallowedBy,
+        });
+        continue;
+      }
+      if (out.some(o => o.block === block)) { note(h3, a, 'duplicate-block', { blockNode: block }); continue; }
+      note(h3, a, 'organic', { blockNode: block });
 
       // Sitelinks: extra anchors inside the same block, below the h3
       // Sitelinks: extra anchors below the h3, on the SAME host as the result.
@@ -352,9 +395,13 @@ const SPS_CLASSIFY = (() => {
     const aio = opts.aioResult;
     const list = [];
     const exclude = [];
+    // Which feature claimed each excluded node. Only read by the diagnostic
+    // trace, so a result that never became an organic can say what swallowed it.
+    const claimedAs = new Map();
+    const claim = (n, type) => { exclude.push(n); claimedAs.set(n, type); };
 
     if (aio?.present && aio.container) {
-      exclude.push(aio.container);
+      claim(aio.container, T.AI_OVERVIEW);
       push(list, aio.container, T.AI_OVERVIEW, {
         citations: aio.citations,
         cited: aio.cited,
@@ -365,21 +412,23 @@ const SPS_CLASSIFY = (() => {
     }
 
     const adNodes = ads();
-    adNodes.forEach(n => { exclude.push(n); push(list, n, T.AD); });
+    adNodes.forEach(n => { claim(n, T.AD); push(list, n, T.AD); });
 
-    shopping().forEach(n => { exclude.push(n); push(list, n, T.SHOPPING); });
-    featuredSnippet().forEach(n => { exclude.push(n); push(list, n, T.FEATURED_SNIPPET); });
-    paa().forEach(n => { exclude.push(n); push(list, n, T.PAA); });
-    localPack().forEach(n => { exclude.push(n); push(list, n, T.LOCAL_PACK); });
-    videos().forEach(n => { exclude.push(n); push(list, n, T.VIDEO); });
-    imagePack().forEach(n => { exclude.push(n); push(list, n, T.IMAGE_PACK); });
-    topStories().forEach(n => { exclude.push(n); push(list, n, T.TOP_STORIES); });
-    discussions().forEach(n => { exclude.push(n); push(list, n, T.DISCUSSIONS); });
+    shopping().forEach(n => { claim(n, T.SHOPPING); push(list, n, T.SHOPPING); });
+    featuredSnippet().forEach(n => { claim(n, T.FEATURED_SNIPPET); push(list, n, T.FEATURED_SNIPPET); });
+    paa().forEach(n => { claim(n, T.PAA); push(list, n, T.PAA); });
+    localPack().forEach(n => { claim(n, T.LOCAL_PACK); push(list, n, T.LOCAL_PACK); });
+    videos().forEach(n => { claim(n, T.VIDEO); push(list, n, T.VIDEO); });
+    imagePack().forEach(n => { claim(n, T.IMAGE_PACK); push(list, n, T.IMAGE_PACK); });
+    topStories().forEach(n => { claim(n, T.TOP_STORIES); push(list, n, T.TOP_STORIES); });
+    discussions().forEach(n => { claim(n, T.DISCUSSIONS); push(list, n, T.DISCUSSIONS); });
     knowledgePanel().forEach(n => push(list, n, T.KNOWLEDGE_PANEL));
     relatedSearches().forEach(n => push(list, n, T.RELATED_SEARCH));
 
     // Organic last, excluding everything already claimed.
-    const orgs = organics(exclude);
+    const trace = [];
+    const orgs = organics(exclude, { claimedAs, trace });
+    SPS_CLASSIFY.lastTrace = trace;
     orgs.sort((a, b) => SPS_MEASURE.docOffset(a.block).yTop - SPS_MEASURE.docOffset(b.block).yTop);
 
     orgs.forEach((o, i) => {
