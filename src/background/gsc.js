@@ -252,6 +252,71 @@ export async function blueLinkCTR(property, scanLog, { days = 28, queryFilter = 
  * Calibrate the model's suppression coefficients against this property.
  * Uses only queries where the scan log recorded exactly one feature above.
  */
+/**
+ * How far the model's estimate sits from measured CTR, across logged queries.
+ *
+ * This is the question any SEO asks before putting an estimate in front of a
+ * client, and until now the only answer was "it is an estimate". Reports the
+ * MEDIAN ratio rather than the mean: one query with 3 impressions and a 50%
+ * CTR would otherwise swing the whole verdict.
+ *
+ * Only queries where the estimate was anchored to a located result are
+ * comparable — if we never found the user's listing we never estimated its
+ * CTR, and GSC's number would be compared against nothing.
+ */
+export async function accuracyVsActuals(property, scanLog, { days = 28, minImpressions = 50 } = {}) {
+  const rows = await queryRows(property, { days, dimensions: ['query'], rowLimit: 25000 });
+  return accuracyFromRows(rows, scanLog, { minImpressions });
+}
+
+/**
+ * The comparison itself, split out from the fetch so it can be tested without
+ * a network call or a signed-in account. Pure: rows in, verdict out.
+ */
+export function accuracyFromRows(rows, scanLog, { minImpressions = 50 } = {}) {
+  const norm = s => (s || '').trim().toLowerCase();
+  const log = {};
+  for (const [q, v] of Object.entries(scanLog || {})) log[norm(q)] = v;
+
+  const ratios = [];
+  let thin = 0, unmatched = 0, unanchored = 0;
+
+  for (const r of rows) {
+    const e = log[norm(r.query)];
+    if (!e) { unmatched++; continue; }
+    const anchored = e.ownedFound ?? (e.ownedRank != null);
+    if (!anchored || e.ownedCTR == null) { unanchored++; continue; }
+    // A handful of impressions produces a CTR that is mostly noise.
+    if ((r.impressions || 0) < minImpressions) { thin++; continue; }
+    if (!r.ctr) continue;
+    ratios.push({ query: r.query, est: e.ownedCTR, actual: r.ctr, ratio: e.ownedCTR / r.ctr });
+  }
+
+  if (!ratios.length) {
+    return { sampleSize: 0, thin, unmatched, unanchored, minImpressions };
+  }
+
+  const sorted = [...ratios].sort((a, b) => a.ratio - b.ratio);
+  const median = sorted[Math.floor(sorted.length / 2)].ratio;
+  const within = (lo, hi) => ratios.filter(x => x.ratio >= lo && x.ratio <= hi).length;
+
+  // Worst offenders, for the user to sanity-check against pages they know.
+  const worst = [...ratios]
+    .sort((a, b) => Math.abs(Math.log(b.ratio)) - Math.abs(Math.log(a.ratio)))
+    .slice(0, 5)
+    .map(x => ({ query: x.query, est: round(x.est, 4), actual: round(x.actual, 4), ratio: round(x.ratio, 2) }));
+
+  return {
+    sampleSize: ratios.length,
+    medianRatio: round(median, 3),
+    within25: within(0.75, 1.25),
+    within50: within(0.5, 1.5),
+    thin, unmatched, unanchored, minImpressions, worst
+  };
+}
+
+function round(v, d) { const m = Math.pow(10, d); return Math.round(v * m) / m; }
+
 export async function calibrateFromGSC(property, scanLog, days = 90) {
   const rows = await queryRows(property, { days, dimensions: ['query'], rowLimit: 25000 });
   const norm = s => (s || '').trim().toLowerCase();

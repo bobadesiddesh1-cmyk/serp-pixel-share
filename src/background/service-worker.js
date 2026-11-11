@@ -124,6 +124,17 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
           return respond({ ok: true, result });
         }
 
+        case 'SPS_MODEL_ACCURACY': {
+          const s = await Store.getSettings();
+          if (!s.gscProperty) return respond({ ok: false, error: 'Connect a GSC property first.' });
+          const log = await Store.getScanLog();
+          if (!Object.keys(log).length) {
+            return respond({ ok: false, error: 'No scans logged yet. Measure a few results pages first.' });
+          }
+          const out = await GSC.accuracyVsActuals(s.gscProperty, log, { days: msg.days || 28 });
+          return respond({ ok: true, ...out });
+        }
+
         case 'SPS_CALIBRATE': {
           const s = await Store.getSettings();
           if (!s.gscProperty) return respond({ ok: false, error: 'Connect a GSC property first.' });

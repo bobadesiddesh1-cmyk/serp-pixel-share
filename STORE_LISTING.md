@@ -137,14 +137,14 @@ chrome://extensions → Details → Allow in Incognito. Setup reports whether ac
 has been granted.
 
 **Verification note — re-check before each submission.** The claim above is only
-true while the shipped code contains no other network calls. Re-run as of 0.5.2,
+true while the shipped code contains no other network calls. Re-run as of 0.6.0,
 the archive being submitted: three `fetch` call sites, all in
 `src/background/gsc.js`, targeting only `searchconsole.googleapis.com` and
 `oauth2.googleapis.com/revoke`; no `XMLHttpRequest`, no `sendBeacon`, no
 `WebSocket`, no remote script loading.
 
 Three host strings in the source are never fetched, and the host grep below will
-show all three:
+show them:
 
 - `www.googleapis.com` — the OAuth scope identifier in `manifest.json`.
 - `www.buildwithsiddesh.com` — the `href` of the maker-credit link in the panel
@@ -153,6 +153,10 @@ show all three:
 - `www.w3.org` — the SVG namespace URI passed to `createElementNS` in
   `SPS.brandMark`. A namespace is an identifier, not an address; nothing is
   requested from it.
+
+Google's own search domains appear only as `content_scripts` match patterns in
+`manifest.json`, which is a declaration of where the measuring script runs, not
+a request the extension makes.
 
 Re-run before publishing:
 

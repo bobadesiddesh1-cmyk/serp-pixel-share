@@ -40,6 +40,7 @@ $$('.tab').forEach(btn => btn.addEventListener('click', () => {
   $$('.tab').forEach(b => b.classList.toggle('tab--on', b === btn));
   $$('.view').forEach(v => { v.hidden = v.id !== 'view-' + btn.dataset.view; });
   if (btn.dataset.view === 'setup') refreshLogSummary();
+  if (btn.dataset.view === 'log') renderLog();
 }));
 
 // ── scan view ──
@@ -425,10 +426,210 @@ async function refreshLogSummary() {
     `${rows.length} queries \u00b7 AIO on ${aio} \u00b7 cited on ${cited} \u00b7 citation rate ${aio ? pct(cited / aio, 0) : '—'}`;
 }
 
+// ── log view ──
+
+/**
+ * The log already carried a 12-point history per query — when it was measured,
+ * whether an AI Overview fired, whether it cited the user, the rank and the
+ * effective position. None of it was ever shown. This is that data.
+ */
+async function renderLog() {
+  const r = await send({ type: 'SPS_SCAN_LOG' });
+  if (!r.ok) return;
+  const rows = Object.values(r.log || {});
+  $('#log-empty').hidden = rows.length > 0;
+  $('#log-body').hidden = rows.length === 0;
+  if (!rows.length) return;
+
+  const aio = rows.filter(x => x.aioPresent).length;
+  const cited = rows.filter(x => x.aioCited).length;
+  $('#log-head').textContent =
+    `${num(rows.length)} queries \u00b7 AI Overview on ${num(aio)} \u00b7 cites you on ${num(cited)}`
+    + (aio ? ` \u00b7 citation rate ${pct(cited / aio, 0)}` : '');
+
+  renderLogChanges(rows);
+  renderLogTable(rows);
+}
+
+/** Only the queries whose SERP actually changed shape since we first saw it. */
+function renderLogChanges(rows) {
+  const box = $('#log-changes');
+  box.textContent = '';
+  const changes = [];
+
+  for (const r of rows) {
+    const h = r.history || [];
+    if (h.length < 2) continue;
+    const first = h[0], last = h[h.length - 1];
+    if (!first.aio && last.aio) {
+      changes.push({ q: r.query, at: last.at, kind: 'bad',
+        what: 'AI Overview appeared' + (last.cited ? ', cites you' : ', does not cite you') });
+    } else if (first.aio && !last.aio) {
+      changes.push({ q: r.query, at: last.at, kind: 'good', what: 'AI Overview gone' });
+    } else if (first.aio && last.aio && !first.cited && last.cited) {
+      changes.push({ q: r.query, at: last.at, kind: 'good', what: 'AI Overview now cites you' });
+    } else if (first.aio && last.aio && first.cited && !last.cited) {
+      changes.push({ q: r.query, at: last.at, kind: 'bad', what: 'AI Overview stopped citing you' });
+    }
+    // Effective position is the number this tool exists to move, so report it
+    // even when the rank itself did not budge.
+    if (first.eff != null && last.eff != null && last.eff !== first.eff) {
+      const worse = last.eff > first.eff;
+      changes.push({ q: r.query, at: last.at, kind: worse ? 'bad' : 'good',
+        what: `acts like #${first.eff} \u2192 #${last.eff}` });
+    }
+  }
+
+  if (!changes.length) {
+    const p = document.createElement('p');
+    p.className = 'note';
+    p.textContent = 'Nothing has changed yet, or each query has only been measured once. '
+      + 'Re-scan the same queries over time and shifts show up here.';
+    box.appendChild(p);
+    return;
+  }
+
+  // One block per query. A query that both gained an AI Overview and lost
+  // effective positions is one finding with two parts, not two findings.
+  changes.sort((a, b) => (b.at || 0) - (a.at || 0));
+  const byQuery = new Map();
+  for (const c of changes) {
+    if (!byQuery.has(c.q)) byQuery.set(c.q, { q: c.q, at: c.at, items: [] });
+    const g = byQuery.get(c.q);
+    g.items.push(c);
+    g.at = Math.max(g.at || 0, c.at || 0);
+  }
+
+  for (const g of [...byQuery.values()].sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 30)) {
+    const row = document.createElement('div');
+    // The block takes its colour from the worst thing in it.
+    row.className = 'chg chg--' + (g.items.some(i => i.kind === 'bad') ? 'bad' : 'good');
+    const q = document.createElement('span');
+    q.className = 'chg__q';
+    q.textContent = g.q;
+    row.appendChild(q);
+    for (const i of g.items) {
+      const w = document.createElement('span');
+      w.className = 'chg__w chg__w--' + i.kind;
+      w.textContent = i.what;
+      row.appendChild(w);
+    }
+    box.appendChild(row);
+  }
+}
+
+function renderLogTable(rows) {
+  const tb = $('#log-table tbody');
+  tb.textContent = '';
+  const sorted = [...rows].sort((a, b) => (b.scannedAt || 0) - (a.scannedAt || 0));
+  for (const r of sorted) {
+    const tr = document.createElement('tr');
+    const cells = [
+      r.query,
+      r.scannedAt ? shortDate(r.scannedAt) : '\u2014',
+      r.aioPresent ? (r.aioCited ? 'cites you' : 'yes') : '\u2014',
+      r.ownedRank != null ? '#' + r.ownedRank : '\u2014',
+      r.ownedEffectivePos != null ? '#' + r.ownedEffectivePos : '\u2014',
+    ];
+    cells.forEach((v, i) => {
+      const td = document.createElement('td');
+      td.textContent = v;
+      if (i === 0) td.className = 'tbl__q';
+      if (i === 2 && r.aioPresent) td.style.color = r.aioCited ? 'var(--teal)' : 'var(--amber)';
+      if (i === 4 && r.ownedRank != null && r.ownedEffectivePos != null
+          && r.ownedEffectivePos > r.ownedRank + 1) td.style.color = 'var(--clay)';
+      tr.appendChild(td);
+    });
+    tb.appendChild(tr);
+  }
+}
+
+function shortDate(ms) {
+  const d = new Date(ms);
+  if (Number.isNaN(d.getTime())) return '\u2014';
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+}
+
+$('#log-export').addEventListener('click', () => $('#exp-log').click());
+$('#log-clear').addEventListener('click', () => $('#clear-log').click());
+
 $('#exp-log').addEventListener('click', async () => {
   const r = await send({ type: 'SPS_EXPORT_LOG_CSV' });
   if (!r.ok) return toast(r.error, true);
   download('sps-scan-log.csv', r.csv);
+});
+
+/**
+ * A plain-text summary of the current scan, for the place this work actually
+ * ends up: a slide or an email. CSV serves the analyst; nobody pastes a CSV
+ * into a client deck.
+ *
+ * Every modelled number is labelled as an estimate in the text itself, not
+ * just in the panel — once it is on the clipboard the UI's labelling is gone,
+ * and this is the form most likely to be read by someone who never saw it.
+ */
+function scanSummaryText() {
+  const scan = state.scan;
+  if (!scan) return null;
+  const s = scan.summary;
+  const own = scan.elements.find(e => e.owned && e.type === SPS.TYPES.ORGANIC);
+  const L = [];
+
+  L.push(`Query: ${s.query || '(none)'}`);
+  if (s.url) {
+    try { L.push(`Measured on: ${new URL(s.url).hostname.replace(/^www\./, '')}`); } catch { /* ignore */ }
+  }
+  L.push(`Measured: ${new Date(s.scannedAt || Date.now()).toLocaleString()}`);
+  L.push('');
+
+  if (s.ownedRank != null && s.ownedEffectivePos != null) {
+    const drop = s.ownedEffectivePos - s.ownedRank;
+    L.push(drop > 0
+      ? `You rank #${s.ownedRank}. The layout makes it perform like #${s.ownedEffectivePos} \u2014 ${drop} positions lost.`
+      : `You rank #${s.ownedRank}, and the layout is not costing you position.`);
+    if (own) L.push(`Your listing renders at ${num(own.yTop)}px, ${scrollWords(own.yTop)} needed.`);
+  } else if (s.ownedRank != null) {
+    L.push(`You rank #${s.ownedRank}.`);
+  } else {
+    L.push('None of your domains rank on this page.');
+  }
+  L.push('');
+
+  L.push(`Page height: ${num(s.serpHeight)}px across ${num(s.count)} measured elements.`);
+  if (own) {
+    L.push(`Your listing occupies ${pct(own.pixelShare, 1)} of the page.`);
+    L.push(`Estimated CTR: ${pct(own.estCTR)} (model estimate, not measured data).`);
+    if (own.actualCTR != null) L.push(`Actual CTR from Search Console: ${pct(own.actualCTR)}.`);
+  }
+
+  if (s.aioPresent) {
+    L.push(`AI Overview: present, ${pct(s.aioPixelShare, 0)} of page height, `
+      + `${num(s.aioCitationCount || 0)} sources cited \u2014 `
+      + (s.aioCited ? 'including you.' : 'not including you.'));
+  } else {
+    L.push('AI Overview: absent on this query.');
+  }
+  if (s.adCount) L.push(`Paid ads above the results: ${num(s.adCount)}.`);
+  if (s.unclassified) L.push(`Unclassified blocks: ${num(s.unclassified)} (not counted in the estimate).`);
+
+  L.push('');
+  L.push('Measured with SERP Pixel Share \u2014 ' + SPS.BRAND.host);
+  return L.join('\n');
+}
+
+$('#copy-summary').addEventListener('click', async () => {
+  const text = scanSummaryText();
+  if (!text) return toast('Nothing scanned yet.', true);
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('Summary copied.');
+  } catch {
+    // Clipboard can be refused. Falling back to a download beats losing the
+    // text, which is the one outcome the user cannot work around.
+    const q = (state.scan?.summary?.query || 'scan').replace(/[^a-z0-9]+/gi, '-').slice(0, 40);
+    download('sps-' + q + '-summary.txt', text);
+    toast('Clipboard refused \u2014 downloaded instead.');
+  }
 });
 
 $('#exp-scan').addEventListener('click', async () => {
@@ -441,6 +642,7 @@ $('#exp-scan').addEventListener('click', async () => {
 $('#clear-log').addEventListener('click', async () => {
   await send({ type: 'SPS_CLEAR_LOG' });
   refreshLogSummary();
+  renderLog();
   toast('Scan log cleared.');
 });
 
@@ -574,6 +776,80 @@ $('#calibrate').addEventListener('click', async () => {
   if (!r.ok) { $('#cal-out').textContent = r.error; return; }
   renderCalibration(r);
 });
+
+$('#accuracy').addEventListener('click', async () => {
+  $('#acc-out').textContent = 'Checking\u2026';
+  const r = await send({ type: 'SPS_MODEL_ACCURACY', days: 28 });
+  if (!r.ok) { $('#acc-out').textContent = r.error; return; }
+  renderAccuracy(r);
+});
+
+/**
+ * Say how wrong the model is, in the direction it is wrong.
+ *
+ * "The estimate reads 18% high" is actionable; a correlation coefficient is
+ * not. Median rather than mean, because one query with a handful of
+ * impressions and a freak CTR would otherwise decide the verdict.
+ */
+function renderAccuracy(r) {
+  const out = $('#acc-out');
+  out.textContent = '';
+  const line = (text, cls) => {
+    const d = document.createElement('div');
+    if (cls) d.className = cls;
+    d.textContent = text;
+    out.appendChild(d);
+    return d;
+  };
+
+  if (!r.sampleSize) {
+    line('No comparable queries yet.');
+    const why = [];
+    if (r.unmatched) why.push(`${num(r.unmatched)} GSC queries not in the scan log`);
+    if (r.unanchored) why.push(`${num(r.unanchored)} scans where your result was not located`);
+    if (r.thin) why.push(`${num(r.thin)} below ${num(r.minImpressions)} impressions`);
+    const p = document.createElement('p');
+    p.className = 'note';
+    p.textContent = why.length
+      ? 'Skipped: ' + why.join(', ') + '. Measure more of the queries you actually rank for.'
+      : 'Measure some results pages for queries this property gets impressions on.';
+    out.appendChild(p);
+    return;
+  }
+
+  const pctOff = Math.round(Math.abs(r.medianRatio - 1) * 100);
+  const dir = r.medianRatio > 1 ? 'high' : 'low';
+  const verdict = pctOff <= 10 ? 'ok' : pctOff <= 30 ? 'warn' : 'bad';
+  line(`Across ${num(r.sampleSize)} queries the estimate reads `
+     + (pctOff === 0 ? 'on the money.' : `${pctOff}% ${dir}.`), 'acc acc--' + verdict);
+  line(`${num(r.within25)} of ${num(r.sampleSize)} within 25% \u00b7 `
+     + `${num(r.within50)} within 50%`);
+
+  const note = document.createElement('p');
+  note.className = 'note';
+  note.textContent = pctOff > 30
+    ? 'A gap this size usually means the suppression defaults do not fit your vertical. Calibrate above.'
+    : 'Calibrating against your own data will tighten this further.';
+  out.appendChild(note);
+
+  if (r.worst?.length) {
+    const h = document.createElement('div');
+    h.className = 'acc__h';
+    h.textContent = 'Furthest off';
+    out.appendChild(h);
+    for (const w of r.worst) {
+      const row = document.createElement('div');
+      row.className = 'calrow';
+      const k = document.createElement('span');
+      k.textContent = w.query;
+      const v = document.createElement('span');
+      v.className = 'calrow__v';
+      v.textContent = `est ${pct(w.est)} vs ${pct(w.actual)}`;
+      row.append(k, v);
+      out.appendChild(row);
+    }
+  }
+}
 
 /**
  * Show every feature's progress, not only the ones that solved. "Not enough

@@ -78,6 +78,46 @@ eq('a deeper sitelink scores at or below its parent rank',
    M.estimate({ type: 'sitelink', rank: 2, yTop: 2622 }, args[1])
      <= M.estimate({ type: 'organic', rank: 2, yTop: 2523 }, args[1]), true);
 
+console.log('\nMODEL ACCURACY VS GSC');
+// Pure join + stats, split out of gsc.js so it runs with no account attached.
+const { accuracyFromRows } = await import(
+  'file://' + path.join(ROOT, 'src/background/gsc.js'));
+
+const mkLog = (q, est, found = true) =>
+  [q, { query: q, ownedCTR: est, ownedFound: found, ownedRank: found ? 2 : null }];
+const mkRow = (q, ctr, impressions = 500) => ({ query: q, ctr, impressions, position: 2 });
+
+// Estimate is exactly double actual everywhere: median ratio must be 2.
+const double = accuracyFromRows(
+  [mkRow('a', 0.05), mkRow('b', 0.04), mkRow('c', 0.10)],
+  Object.fromEntries([mkLog('a', 0.10), mkLog('b', 0.08), mkLog('c', 0.20)]));
+eq('sample counts every comparable query', double.sampleSize, 3);
+eq('reports the ratio, not a correlation', double.medianRatio, 2);
+eq('nothing is within 25% when it is all 2x off', double.within25, 0);
+
+// One freak result must not decide the verdict — that is why it is a median.
+const freak = accuracyFromRows(
+  [mkRow('a', 0.05), mkRow('b', 0.05), mkRow('c', 0.05), mkRow('d', 0.0001)],
+  Object.fromEntries([mkLog('a', 0.05), mkLog('b', 0.05), mkLog('c', 0.05), mkLog('d', 0.05)]));
+eq('an outlier does not move the median', freak.medianRatio, 1);
+eq('but it is still counted in the sample', freak.sampleSize, 4);
+
+// Exclusions.
+const excl = accuracyFromRows(
+  [mkRow('known', 0.05), mkRow('thin', 0.05, 3), mkRow('stranger', 0.05), mkRow('lost', 0.05)],
+  Object.fromEntries([mkLog('known', 0.05), mkLog('thin', 0.05), mkLog('lost', null, false)]));
+eq('counts only the comparable one', excl.sampleSize, 1);
+eq('thin-impression queries are excluded, not silently averaged in', excl.thin, 1);
+eq('GSC queries never scanned are reported separately', excl.unmatched, 1);
+eq('scans that never found your result are reported separately', excl.unanchored, 1);
+
+eq('no comparable rows reports an empty sample rather than throwing',
+   accuracyFromRows([], {}).sampleSize, 0);
+// Case and whitespace must not split a query from its own log entry.
+eq('query matching is normalised',
+   accuracyFromRows([mkRow('  HDFC Bank ', 0.05)],
+     Object.fromEntries([mkLog('hdfc bank', 0.05)])).sampleSize, 1);
+
 console.log('\nCALIBRATION PROGRESS');
 // Below the threshold the old version returned nothing at all, so the panel
 // could only say "not enough data" — identical from one row or seven.

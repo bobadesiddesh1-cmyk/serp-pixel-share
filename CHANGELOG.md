@@ -1,5 +1,70 @@
 # Changelog
 
+## 0.6.0
+
+Usability pass. Six changes, all of them things the product knew but never said.
+
+### Added
+
+- **A Log tab.** `recordScan` has been keeping a twelve-point history per query
+  since early on — when it was measured, whether an AI Overview fired, whether
+  it cited you, the rank and the effective position — and none of it was ever
+  displayed. It is now the most useful screen in the extension: a *What changed*
+  list ("AI Overview appeared, does not cite you" / "acts like #3 → #10")
+  grouped one block per query, above a table of every logged query.
+
+  No storage change was needed; the data was already there.
+
+- **Model accuracy against Search Console.** Compares the estimate with your
+  measured CTR across logged queries and reports the gap in the direction it
+  runs: "across 24 queries the estimate reads 6% high", plus how many fall
+  within 25% and 50%, and the five queries furthest off. Median rather than
+  mean, so one query with a handful of impressions cannot decide the verdict.
+  Queries under 50 impressions, queries never scanned, and scans that never
+  located your result are each excluded and counted separately rather than
+  quietly averaged in.
+
+- **Copy summary**, on the scan view. A plain-text block for the slide or email
+  this work actually ends up in. Every modelled number is labelled as an
+  estimate in the text itself — once it is on the clipboard the interface's
+  labelling is gone, and that is the form most likely to be read by someone who
+  never saw the panel.
+
+- **A first-run prompt for your domain.** Without one the measurements still ran
+  but nothing could be marked as yours, so positions lost, effective rank and
+  estimated CTR all rendered as em-dashes — the entire headline blank, with the
+  only fix buried in Setup. The hero now also distinguishes "you have not told
+  me your domain" from "your domain does not rank here", which the old copy
+  ran together.
+
+- **Calibration progress.** Each feature needs eight single-feature queries
+  before a coefficient is trusted; below that the button said "not enough data"
+  whether you had one or seven. It now shows counts per feature, so being one
+  query short looks like being one query short.
+
+### Changed
+
+- **Fifty Google country domains**, up from three. Anyone on google.co.uk, .de,
+  .com.au or .ca previously got silence — no chips, no panel, no error. A Google
+  results page outside the list is now named in the message instead of being
+  reported as "no results tab" while one is open on screen.
+
+- **Google removed from `host_permissions`.** The content-script declaration is
+  what grants access to the page being measured, and the extension never makes
+  a request to Google Search, so those entries asked for standing access that
+  was never used. The permission surface is now two API hosts.
+
+- Domains are normalised on entry (`SPS.normaliseDomain`), because people paste
+  URLs and an un-normalised value matches nothing — which looks exactly like
+  not ranking.
+
+### Fixed
+
+- A host check accepted `google.com.evil.example` as a Google results page: a
+  `[a-z.]` character class for the TLD swallows further labels. Found by writing
+  the test for the new domain coverage, not by review. Parsed with `URL` now,
+  with the suffix capped at two letters-only labels.
+
 ## 0.5.4
 
 ### Added

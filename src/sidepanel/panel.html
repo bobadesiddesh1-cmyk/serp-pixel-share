@@ -19,6 +19,7 @@
 <nav class="tabs" role="tablist">
   <button class="tab tab--on" data-view="scan" role="tab">Scan</button>
   <button class="tab" data-view="aio" role="tab">AI Overview</button>
+  <button class="tab" data-view="log" role="tab">Log</button>
   <button class="tab" data-view="setup" role="tab">Setup</button>
 </nav>
 
@@ -84,6 +85,7 @@
       </table></div>
 
       <div class="row">
+        <button id="copy-summary" class="btn">Copy summary</button>
         <button id="exp-scan" class="btn">Export scan CSV</button>
         <button id="mode-toggle" class="btn">Overlay: inline</button>
       </div>
@@ -121,6 +123,33 @@
     <p class="note">Rebuilds CTR on impressions where no AI Overview fired. Needs several logged scans plus a connected GSC property.</p>
     <button id="run-blue" class="btn btn--go">Rebuild blue-link CTR</button>
     <div id="blue-out"></div>
+  </section>
+
+  <!-- ── Log ──────────────────────────────────────────── -->
+  <section id="view-log" class="view" hidden>
+    <div id="log-empty" class="empty">
+      <p class="empty__h">Nothing logged yet</p>
+      <p class="empty__b">Every results page you measure outside incognito is kept here, so you can see what changed.</p>
+    </div>
+
+    <div id="log-body" hidden>
+      <div id="log-head" class="mono"></div>
+
+      <h2 class="sec">What changed</h2>
+      <p class="note" id="log-changes-note">Compared against the first time each query was measured.</p>
+      <div id="log-changes"></div>
+
+      <h2 class="sec">Logged queries</h2>
+      <div class="tblwrap"><table class="tbl" id="log-table">
+        <thead><tr><th>Query</th><th>Last</th><th>AIO</th><th>Rank</th><th>Acts</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+
+      <div class="row">
+        <button id="log-export" class="btn">Export CSV</button>
+        <button id="log-clear" class="btn btn--danger">Clear log</button>
+      </div>
+    </div>
   </section>
 
   <!-- ── Setup ────────────────────────────────────────── -->
@@ -178,6 +207,11 @@
     <p class="note">Solves feature-suppression coefficients from your own GSC data. Needs at least 8 logged single-feature queries per feature.</p>
     <button id="calibrate" class="btn">Calibrate from GSC</button>
     <div id="cal-out" class="mono"></div>
+
+    <h2 class="sec">Model accuracy</h2>
+    <p class="note">Compares the estimate against your measured Search Console CTR across logged queries. Needs a connected property and a few logged scans.</p>
+    <button id="accuracy" class="btn">Check against GSC</button>
+    <div id="acc-out" class="mono"></div>
 
     <h2 class="sec">Scan log</h2>
     <p class="note">Every results page you measure is logged here. Blue-link CTR and calibration both read from it.</p>

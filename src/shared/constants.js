@@ -2,7 +2,7 @@
 // Attached to globalThis so content scripts (non-module) and the panel both read it.
 
 const SPS = {
-  VERSION: '0.5.4',
+  VERSION: '0.6.0',
 
   // Maker credit. Rendered in the panel footer and the on-page HUD, and it is
   // a plain link — nothing is fetched from this host, no parameters are
@@ -262,8 +262,8 @@ SPS.isSupportedSerp = function (url) {
 /**
  * Normalise whatever the user typed into a bare registrable domain.
  *
- * People paste URLs. "https://www.hdfc.bank.in/personal/borrow" has to become
- * "hdfc.bank.in" or the domain silently never matches and the panel stays
+ * People paste URLs. "https://www.example.com/personal/borrow" has to become
+ * "example.com" or the domain silently never matches and the panel stays
  * empty, which is indistinguishable from "you do not rank here".
  *
  * Returns '' for anything that cannot be a hostname, so callers can reject it.
